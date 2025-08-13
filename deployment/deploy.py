@@ -1,7 +1,7 @@
 import vertexai
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
-from rag.agent import root_agent
+from maxiagent.agent import root_agent
 import logging
 import os
 from dotenv import set_key
@@ -51,7 +51,7 @@ remote_app = agent_engines.create(
         "llama_index"
     ],
     extra_packages=[
-        "./rag",
+        "./maxiagent",
     ],
 )
 
