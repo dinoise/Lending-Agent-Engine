@@ -1,16 +1,13 @@
-import os
+from . import current_config
 
-from google.adk.agents import Agent
-
-from dotenv import load_dotenv
 from .prompts import return_instructions_root
 from .tools import (rag_response, 
                     google_web_search)
 
-load_dotenv()
+from google.adk.agents import Agent
 
 root_agent = Agent(
-    model=os.environ.get("MODEL"),
+    model=current_config.ROOT_AGENT_MODEL,
     name='maxiagent',
     instruction=return_instructions_root(),
     tools=[
