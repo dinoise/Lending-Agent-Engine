@@ -36,10 +36,29 @@ app = AdkApp(
     enable_tracing=True,
 )
 
+def load_env_to_dict(filepath):
+    env_dict = {}
+    try:
+        with open(filepath, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: continue
+                    env_dict[key.strip()] = value.strip().strip('"\'')
+    except FileNotFoundError:
+        print(f"Archivo {filepath} no encontrado")
+    return env_dict
+
+
+env_dict = load_env_to_dict(ENV_FILE_PATH)
+print(env_dict)
+
 logging.debug("deploying agent to agent engine:")
 
-remote_app = agent_engines.create(
+remote_app: agent_engines.AgentEngine = agent_engines.create(
     app,
+    env_vars=env_dict,
     requirements=[
         "google-cloud-aiplatform[adk,agent-engines]",
         "google-adk",
