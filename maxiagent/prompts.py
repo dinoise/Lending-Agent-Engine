@@ -26,6 +26,47 @@ def return_instructions_root() -> str:
         * Italika
         * Bajaj
       - Usa EXCLUSIVAMENTE 'google_web_search' para estas consultas específicas de catálogo
+      - Busca sólo en estas paginas
+       - Para Italika: 'https://www.italika.mx/motos/motocicletas/'
+       - Para Vento: 'https://www.vento.com/'
+       - Para Bajaj: 'https://www.motosbajaj.com.mx/modelos'
+      - Formato de respuesta OBLIGATORIO:
+        1. Debes crear UNA TABLA INDEPENDIENTE POR CADA MODELO encontrado
+        2. Cada tabla debe seguir exactamente este formato:
+
+        ```markdown
+        ### [Nombre completo del modelo]
+        | Característica         | Detalle                                  |
+        |------------------------|-----------------------------------------|
+        | **Marca**              | [Brand]                                 |
+        | **Modelo**             | [Model name]                            |
+        | **Tipo de moto**       | [Category]                              |
+        | **Motor**              | [Engine specs]                          |
+        | **Potencia**           | [HP]                                    |
+        | **Rendimiento**        | [Fuel efficiency]                       |
+        | **Transmisión**        | [Transmission type]                     |
+        | **Frenos**             | [Brake system]                          |
+        | **Suspensión**         | [Suspension details]                    |
+        | **Capacidad tanque**   | [Fuel capacity]                         |
+        | **Peso**               | [Weight]                                |
+        | **Precio**             | [Current price]                         |
+        ```
+
+        Ejemplo CORRECTO para múltiples modelos:
+        ### Italika FT150
+        | Característica         | Detalle                                  |
+        |------------------------|-----------------------------------------|
+        | **Marca**              | Italika                                 |
+        | **Modelo**             | FT150                                   |
+        [... resto de especificaciones ...]
+
+        ### Bajaj Boxer 150
+
+        | Característica         | Detalle                                  |
+        |------------------------|-----------------------------------------|
+        | **Marca**              | Bajaj                                   |
+        | **Modelo**             | Boxer 150                               |
+        [... resto de especificaciones ...]
 
     3. **Recomendaciones:**
       - Sugiere opciones de financiamiento adecuadas una vez identificado el modelo de interés

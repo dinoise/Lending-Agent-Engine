@@ -1,4 +1,5 @@
 from . import current_config
+from .utils import get_page_content
 
 from googleapiclient.discovery import build
 from vertexai.preview import rag
@@ -43,15 +44,20 @@ def google_web_search(query: str) -> dict:
     service = build("customsearch", "v1", developerKey=current_config.GOOGLE_SEARCH_API_KEY)
     res = service.cse().list(
         q=query,
-        cx=current_config.GOOGLE_CSE_ID,  # ID del motor de búsqueda personalizado
-        num=5  # Número de resultados
+        cx=current_config.GOOGLE_CSE_ID,
+        num=5
     ).execute()
     
-    return {
-        "status": "success",
-        "results": [{
+    results = []
+    for item in res.get("items", []):
+        # Obtener contenido extendido de la página
+        extended_content = get_page_content(item["link"])
+        
+        results.append({
             "title": item["title"],
             "link": item["link"],
-            "snippet": item["snippet"]
-        } for item in res.get("items", [])]
-    }
+            "snippet": item["snippet"],
+            "extended_content": extended_content
+        })
+    
+    return {"status": "success", "results": results}
