@@ -4,15 +4,17 @@ from google.adk.agents import Agent
 
 from dotenv import load_dotenv
 from .prompts import return_instructions_root
-from .tools import ask_vertex_retrieval
+from .tools import (rag_response, 
+                    google_web_search)
 
 load_dotenv()
 
 root_agent = Agent(
     model=os.environ.get("MODEL"),
-    name='ask_rag_agent',
+    name='maxiagent',
     instruction=return_instructions_root(),
     tools=[
-        ask_vertex_retrieval,
+        rag_response,
+        google_web_search
     ]
 )
