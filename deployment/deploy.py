@@ -5,23 +5,18 @@ from maxiagent.agent import root_agent
 import logging
 import os
 from dotenv import set_key
+import argparse
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
-GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
-STAGING_BUCKET = os.getenv("STAGING_BUCKET")
-# Define the path to the .env file relative to this script
-ENV_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='Deploy Agent to Vertex AI Agent Engine')
+    parser.add_argument('--create', action='store_true', help='Create a new agent')
+    parser.add_argument('--update', action='store_true', help='Update an existing agent')
+    parser.add_argument('--resource-id', type=str, help='Resource ID of the agent to update')
+    return parser.parse_args()
 
-vertexai.init(
-    project=GOOGLE_CLOUD_PROJECT,
-    location=GOOGLE_CLOUD_LOCATION,
-    staging_bucket=STAGING_BUCKET,
-)
-
-# Function to update the .env file
 def update_env_file(agent_engine_id, env_file_path):
     """Updates the .env file with the agent engine ID."""
     try:
@@ -29,12 +24,6 @@ def update_env_file(agent_engine_id, env_file_path):
         print(f"Updated AGENT_ENGINE_ID in {env_file_path} to {agent_engine_id}")
     except Exception as e:
         print(f"Error updating .env file: {e}")
-
-logger.info("deploying app...")
-app = AdkApp(
-    agent=root_agent,
-    enable_tracing=True,
-)
 
 def load_env_to_dict(filepath):
     env_dict = {}
@@ -44,38 +33,83 @@ def load_env_to_dict(filepath):
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
-                    if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: continue
+                    if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: 
+                        continue
                     env_dict[key.strip()] = value.strip().strip('"\'')
     except FileNotFoundError:
         print(f"Archivo {filepath} no encontrado")
     return env_dict
 
+def deploy_agent(args):
+    # Configuración inicial
+    GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
+    GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
+    STAGING_BUCKET = os.getenv("STAGING_BUCKET")
+    ENV_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-env_dict = load_env_to_dict(ENV_FILE_PATH)
-print(env_dict)
+    vertexai.init(
+        project=GOOGLE_CLOUD_PROJECT,
+        location=GOOGLE_CLOUD_LOCATION,
+        staging_bucket=STAGING_BUCKET,
+    )
 
-logging.debug("deploying agent to agent engine:")
+    # Cargar variables de entorno
+    env_dict = load_env_to_dict(ENV_FILE_PATH)
+    print(env_dict)
 
-remote_app: agent_engines.AgentEngine = agent_engines.create(
-    app,
-    env_vars=env_dict,
-    requirements=[
-        "google-cloud-aiplatform[adk,agent-engines]",
-        "google-adk",
-        "python-dotenv",
-        "google-auth",
-        "tqdm",
-        "requests",
-        "deprecated",
-        "llama_index"
-    ],
-    extra_packages=[
-        "./maxiagent",
-    ],
-)
+    # Crear la aplicación ADK
+    logger.info("Creating ADK app...")
+    app = AdkApp(
+        agent=root_agent,
+        enable_tracing=True,
+    )
 
-# log remote_app
-logging.info(f"Deployed agent to Vertex AI Agent Engine successfully, resource name: {remote_app.resource_name}")
+    if args.create:
+        # Crear nuevo agente
+        logger.info("Deploying new agent to Agent Engine...")
+        remote_app = agent_engines.create(
+            app,
+            env_vars=env_dict,
+            requirements=[
+                "google-cloud-aiplatform[adk,agent-engines]",
+                "google-adk",
+                "python-dotenv",
+                "google-auth",
+                "tqdm",
+                "requests",
+                "deprecated",
+                "llama_index"
+            ],
+            extra_packages=["./maxiagent"],
+        )
+        
+        logger.info(f"Deployed agent to Vertex AI Agent Engine successfully, resource name: {remote_app.resource_name}")
+        update_env_file(remote_app.resource_name, ENV_FILE_PATH)
+        
+    elif args.update and args.resource_id:
+        # Actualizar agente existente
+        logger.info(f"Updating existing agent: {args.resource_id}")
+        remote_app = agent_engines.update(
+            resource_name=args.resource_id,
+            agent_engine=app,
+            env_vars=env_dict,
+            requirements=[
+                "google-cloud-aiplatform[adk,agent-engines]",
+                "google-adk",
+                "python-dotenv",
+                "google-auth",
+                "tqdm",
+                "requests",
+                "deprecated",
+                "llama_index"
+            ],
+            extra_packages=["./maxiagent"],
+        )
+        
+        logger.info(f"Successfully updated agent: {args.resource_id}")
+    else:
+        logger.error("Invalid arguments. Use --create to create new agent or --update with --resource-id to update existing agent.")
 
-# Update the .env file with the new Agent Engine ID
-update_env_file(remote_app.resource_name, ENV_FILE_PATH)
+if __name__ == "__main__":
+    args = parse_arguments()
+    deploy_agent(args)
