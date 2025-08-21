@@ -9,8 +9,9 @@ on:
 jobs:
   deploy-agent-engine:
     name: Deploy Agent Engine
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -22,8 +23,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          echo "📦 Instalando dependencias Python..."
           python -m pip install --upgrade pip
           pip install google-cloud-aiplatform[adk,agent-engines] google-adk python-dotenv google-auth tqdm requests deprecated llama_index
+          echo "✅ Dependencias instaladas"
 
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
@@ -48,7 +51,10 @@ jobs:
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
         run: |
+          echo "🚀 Iniciando despliegue en producción..."
+          echo "🔧 Variables de entorno configuradas"
           python deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID }}
+          echo "✅ Despliegue de producción completado"
 
       - name: Deploy Agent Engine (Development - Update)
         if: ${{ github.ref == 'refs/heads/dev' }}
@@ -63,4 +69,16 @@ jobs:
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
         run: |
+          echo "🚀 Iniciando despliegue en desarrollo..."
+          echo "🔧 Variables de entorno configuradas"
           python deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID_DEV }}
+          echo "✅ Despliegue de desarrollo completado"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: |
+            ${{ github.workspace }}/*.log
+            /tmp/*.log
