@@ -48,7 +48,7 @@ jobs:
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
         run: |
-          python deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID }}
+          python deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID }}
 
       - name: Deploy Agent Engine (Development - Update)
         if: ${{ github.ref == 'refs/heads/dev' }}
@@ -63,4 +63,4 @@ jobs:
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
         run: |
-          python deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID_DEV }}
+          python deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID_DEV }}
