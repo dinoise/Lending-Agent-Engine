@@ -53,7 +53,7 @@ jobs:
         run: |
           echo "🚀 Iniciando despliegue en producción..."
           echo "🔧 Variables de entorno configuradas"
-          python -m deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID }}
+          python -m deployment/deploy.py --update --resource-id ${{ secrets.AGENT_ENGINE_ID }}
           echo "✅ Despliegue de producción completado"
 
       - name: Deploy Agent Engine (Development - Update)
@@ -71,7 +71,7 @@ jobs:
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."
           echo "🔧 Variables de entorno configuradas"
-          python deployment/deploy.py --update --resource-id=${{ secrets.AGENT_ENGINE_ID_DEV }}
+          python deployment/deploy.py --update --resource-id ${{ secrets.AGENT_ENGINE_ID_DEV }}
           echo "✅ Despliegue de desarrollo completado"
 
       - name: Upload logs on failure
