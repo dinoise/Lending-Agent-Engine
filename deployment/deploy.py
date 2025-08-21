@@ -7,6 +7,7 @@ import logging
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
 from dotenv import set_key
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,7 +23,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--resource-id', type=str, help='Resource ID of the agent to update')
     return parser.parse_args()
 
-def update_env_file(agent_engine_id, env_file_path):
+def update_env_file(agent_engine_id, env_file_path) -> None:
     """Updates the .env file with the agent engine ID."""
     try:
         set_key(env_file_path, "AGENT_ENGINE_ID", agent_engine_id)
@@ -30,7 +31,7 @@ def update_env_file(agent_engine_id, env_file_path):
     except Exception as e:
         print(f"Error updating .env file: {e}")
 
-def load_env_to_dict(filepath):
+def load_env_to_dict(filepath) -> dict[Any, Any]:
     env_dict = {}
     try:
         with open(filepath, 'r') as file:
@@ -89,7 +90,7 @@ def deploy_agent(args) -> None:
         )
         
         logger.info(f"Deployed agent to Vertex AI Agent Engine successfully, resource name: {remote_app.resource_name}")
-        update_env_file(remote_app.resource_name, ENV_FILE_PATH)
+        # update_env_file(remote_app.resource_name, ENV_FILE_PATH)
         
     elif args.update and args.resource_id:
         # Actualizar agente existente
