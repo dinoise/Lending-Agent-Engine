@@ -1,11 +1,16 @@
 import vertexai
+import argparse
+import sys
+import os
+import logging
+
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
-from ..maxiagent.agent import root_agent
-import logging
-import os
 from dotenv import set_key
-import argparse
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from maxiagent.agent import root_agent
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
