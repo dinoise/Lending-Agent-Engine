@@ -45,7 +45,7 @@ def load_env_to_dict(filepath):
         print(f"Archivo {filepath} no encontrado")
     return env_dict
 
-def deploy_agent(args):
+def deploy_agent(args) -> None:
     # Configuración inicial
     GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
     GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
