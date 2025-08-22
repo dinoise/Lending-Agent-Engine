@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Deploy Agent to Vertex AI Agent Engine')
     parser.add_argument('--create', action='store_true', help='Create a new agent')
+    parser.add_argument('--display-name', type=str, help='The name of the new agent')
     parser.add_argument('--delete', action='store_true', help='Delete an existing agent')
     parser.add_argument('--update', action='store_true', help='Update an existing agent')
     parser.add_argument('--resource-id', type=str, help='Resource ID of the agent to update')
@@ -72,12 +73,11 @@ def deploy_agent(args: argparse.Namespace) -> None:
         enable_tracing=True,
     )
 
-    if args.create:
+    if args.create and args.display_name:
         # Crear nuevo agente
         logger.info("Deploying new agent to Agent Engine...")
-        remote_app = agent_engines.create(
-            app,
-            env_vars=env_dict,
+        remote_app: agent_engines.AgentEngine = agent_engines.create(
+            agent_engine=app,
             requirements=[
                 "google-cloud-aiplatform[adk,agent-engines]",
                 "google-adk",
@@ -88,6 +88,8 @@ def deploy_agent(args: argparse.Namespace) -> None:
                 "deprecated",
                 "llama_index"
             ],
+            display_name=args.display_name,
+            env_vars=env_dict,
             extra_packages=["./maxiagent"],
         )
         
@@ -95,7 +97,7 @@ def deploy_agent(args: argparse.Namespace) -> None:
     elif args.update and args.resource_id:
         # Actualizar agente existente
         logger.info(f"Updating existing agent: {args.resource_id}")
-        remote_app = agent_engines.update(
+        remote_app: agent_engines.AgentEngine = agent_engines.update(
             resource_name=args.resource_id,
             agent_engine=app,
             env_vars=env_dict,
