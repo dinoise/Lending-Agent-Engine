@@ -4,11 +4,12 @@ import sys
 import os
 import logging
 
+from typing import Dict
+from dataclasses import dataclass
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
 from google.api_core import exceptions as google_exceptions
-from dotenv import set_key
-from typing import Any
+from dotenv import set_key, find_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -17,118 +18,154 @@ from maxiagent.agent import root_agent
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Deploy Agent to Vertex AI Agent Engine')
-    parser.add_argument('--create', action='store_true', help='Create a new agent')
-    parser.add_argument('--display-name', type=str, help='The name of the new agent')
-    parser.add_argument('--delete', action='store_true', help='Delete an existing agent')
-    parser.add_argument('--update', action='store_true', help='Update an existing agent')
-    parser.add_argument('--resource-id', type=str, help='Resource ID of the agent to update')
-    return parser.parse_args()
+@dataclass
+class AgentConfig:
+    project: str
+    location: str
+    staging_bucket: str
+    env_file_path: str | None = None
 
-def update_env_file(agent_engine_id, env_file_path) -> None:
-    """Updates the .env file with the agent engine ID."""
-    try:
-        set_key(env_file_path, "AGENT_ENGINE_ID", agent_engine_id)
-        print(f"Updated AGENT_ENGINE_ID in {env_file_path} to {agent_engine_id}")
-    except Exception as e:
-        print(f"Error updating .env file: {e}")
+    def __post_init__(self):
+        if not self.env_file_path:
+            self.env_file_path = find_dotenv(usecwd=True)
 
-def load_env_to_dict(filepath) -> dict[Any, Any]:
-    env_dict = {}
-    try:
-        with open(filepath, 'r') as file:
-            for line in file:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: 
-                        continue
-                    env_dict[key.strip()] = value.strip().strip('"\'')
-    except FileNotFoundError:
-        print(f"Archivo {filepath} no encontrado")
-    return env_dict
-
-def deploy_agent(args: argparse.Namespace) -> None:
-    # Configuración inicial
-    GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
-    GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
-    STAGING_BUCKET = os.getenv("STAGING_BUCKET")
-    ENV_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-    vertexai.init(
-        project=GOOGLE_CLOUD_PROJECT,
-        location=GOOGLE_CLOUD_LOCATION,
-        staging_bucket=STAGING_BUCKET,
-    )
-
-    # Cargar variables de entorno
-    env_dict = load_env_to_dict(ENV_FILE_PATH)
-    print(env_dict)
-
-    # Crear la aplicación ADK
-    logger.info("Creating ADK app...")
-    app = AdkApp(
-        agent=root_agent,
-        enable_tracing=True,
-    )
-
-    if args.create and args.display_name:
-        # Crear nuevo agente
-        logger.info("Deploying new agent to Agent Engine...")
-        remote_app: agent_engines.AgentEngine = agent_engines.create(
-            agent_engine=app,
-            requirements=[
-                "google-cloud-aiplatform[adk,agent-engines]",
-                "google-adk",
-                "python-dotenv",
-                "google-auth",
-                "tqdm",
-                "requests",
-                "deprecated",
-                "llama_index"
-            ],
-            display_name=args.display_name,
-            env_vars=env_dict,
-            extra_packages=["./maxiagent"],
-        )
+class VertexAgentManager:
+    """Manejador para operaciones de Agent Engines en Vertex AI"""
+    
+    # Paquetes requeridos estándar
+    BASE_REQUIREMENTS = [
+        "google-cloud-aiplatform[adk,agent-engines]",
+        "google-adk",
+        "python-dotenv",
+        "google-auth",
+        "tqdm",
+        "requests",
+        "deprecated",
+        "llama_index"
+    ]
+    
+    def __init__(self, config: AgentConfig) -> None:
+        self.config: AgentConfig = config
+        self._initialize_vertex()
+        self.env_vars: Dict[str, str] = self._load_env_vars()
         
-        logger.info(f"Deployed agent to Vertex AI Agent Engine successfully, resource name: {remote_app.resource_name}")
-    elif args.update and args.resource_id:
-        # Actualizar agente existente
-        logger.info(f"Updating existing agent: {args.resource_id}")
-        remote_app: agent_engines.AgentEngine = agent_engines.update(
-            resource_name=args.resource_id,
-            agent_engine=app,
-            env_vars=env_dict,
-            requirements=[
-                "google-cloud-aiplatform[adk,agent-engines]",
-                "google-adk",
-                "python-dotenv",
-                "google-auth",
-                "tqdm",
-                "requests",
-                "deprecated",
-                "llama_index"
-            ],
-            extra_packages=["./maxiagent"],
+    def _initialize_vertex(self) -> None:
+        """Inicializa el entorno de Vertex AI"""
+        vertexai.init(
+            project=self.config.project,
+            location=self.config.location,
+            staging_bucket=self.config.staging_bucket,
         )
-        
-        logger.info(f"Successfully updated agent: {args.resource_id}")
-    elif args.delete and args.resource_id:
+    
+    def _load_env_vars(self) -> Dict[str, str]:
+        """Carga variables de entorno desde archivo"""
+        env_dict = {}
         try:
-            resource_id: str = args.resource_id
-            logger.info(f"Deleting agent: {resource_id}")
+            with open(self.config.env_file_path, 'r') as file:
+                for line in file:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: continue
+                        env_dict[key.strip()] = value.strip().strip('"\'')
+        except FileNotFoundError:
+            logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
+        return env_dict
+    
+    def _create_adk_app(self) -> AdkApp:
+        """Crea la aplicación ADK"""
+        logger.info("Creating ADK app...")
+        return AdkApp(
+            agent=root_agent,
+            enable_tracing=True,
+        )
+    
+    def create_agent(self, display_name: str) -> str:
+        """Crea un nuevo agente"""
+        app = self._create_adk_app()
+        
+        remote_app = agent_engines.create(
+            agent_engine=app,
+            requirements=self.BASE_REQUIREMENTS,
+            display_name=display_name,
+            env_vars=self.env_vars,
+            extra_packages=["./maxiagent"],
+        )
+        
+        logger.info(f"Agent creado: {remote_app.resource_name}")
+        # self._update_env_file(remote_app.resource_name)
+        return remote_app.resource_name
+    
+    def update_agent(self, resource_id: str) -> str:
+        """Actualiza un agente existente"""
+        app = self._create_adk_app()
+        
+        remote_app = agent_engines.update(
+            resource_name=resource_id,
+            agent_engine=app,
+            env_vars=self.env_vars,
+            requirements=self.BASE_REQUIREMENTS,
+            extra_packages=["./maxiagent"],
+        )
+        
+        logger.info(f"Agent actualizado: {resource_id}")
+        return remote_app.resource_name
+    
+    def delete_agent(self, resource_id: str) -> None:
+        """Elimina un agente"""
+        try:
             remote_agent = agent_engines.get(resource_id)
             remote_agent.delete(force=True)
-            logger.info(f"Successfully deleted remote agent: {resource_id}")
+            logger.info(f"Agent eliminado: {resource_id}")
         except google_exceptions.NotFound:
-            logger.error(f"Agent with resource ID {resource_id} not found.")
+            logger.error(f"Agent no encontrado: {resource_id}")
+            raise
         except Exception as e:
-            logger.error(f"An error occurred while deleting agent {resource_id}: {e}")
-    else:
-        logger.error("Invalid arguments. Use --create to create new agent or --update with --resource-id to update existing agent.")
+            logger.error(f"Error eliminando agent {resource_id}: {e}")
+            raise
+    
+    def _update_env_file(self, agent_engine_id: str) -> None:
+        """Actualiza el archivo .env con el ID del agent engine"""
+        try:
+            set_key(self.config.env_file_path, "AGENT_ENGINE_ID", agent_engine_id)
+            logger.info(f"Actualizado AGENT_ENGINE_ID en {self.config.env_file_path}")
+        except Exception as e:
+            logger.error(f"Error actualizando .env file: {e}")
+            raise
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description='Manage Vertex AI Agent Engines')
+    parser.add_argument('--create', action='store_true', help='Create a new agent')
+    parser.add_argument('--display-name', type=str, help='Display name for the agent')
+    parser.add_argument('--delete', action='store_true', help='Delete an agent')
+    parser.add_argument('--update', action='store_true', help='Update an agent')
+    parser.add_argument('--resource-id', type=str, help='Agent resource ID')
+    
+    args: argparse.Namespace = parser.parse_args()
+    
+    # Configuración desde variables de entorno
+    config = AgentConfig(
+        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+        staging_bucket=os.getenv("STAGING_BUCKET"),
+    )
+    
+    manager = VertexAgentManager(config)
+    
+    try:
+        if args.create and args.display_name:
+            manager.create_agent(args.display_name)
+        elif args.update and args.resource_id:
+            manager.update_agent(args.resource_id)
+        elif args.delete and args.resource_id:
+            manager.delete_agent(args.resource_id)
+        else:
+            logger.error("Comando no válido. Verifica los argumentos.")
+            sys.exit(1)
+            
+    except Exception as e:
+        logger.error(f"Operación fallida: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    args: argparse.Namespace = parse_arguments()
-    deploy_agent(args)
+    main()
