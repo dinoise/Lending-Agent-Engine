@@ -6,6 +6,7 @@ import logging
 
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
+from google.api_core import exceptions as google_exceptions
 from dotenv import set_key
 from typing import Any
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Deploy Agent to Vertex AI Agent Engine')
     parser.add_argument('--create', action='store_true', help='Create a new agent')
+    parser.add_argument('--delete', action='store_true', help='Delete an existing agent')
     parser.add_argument('--update', action='store_true', help='Update an existing agent')
     parser.add_argument('--resource-id', type=str, help='Resource ID of the agent to update')
     return parser.parse_args()
@@ -46,7 +48,7 @@ def load_env_to_dict(filepath) -> dict[Any, Any]:
         print(f"Archivo {filepath} no encontrado")
     return env_dict
 
-def deploy_agent(args) -> None:
+def deploy_agent(args: argparse.Namespace) -> None:
     # Configuración inicial
     GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
     GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION")
@@ -90,8 +92,6 @@ def deploy_agent(args) -> None:
         )
         
         logger.info(f"Deployed agent to Vertex AI Agent Engine successfully, resource name: {remote_app.resource_name}")
-        # update_env_file(remote_app.resource_name, ENV_FILE_PATH)
-        
     elif args.update and args.resource_id:
         # Actualizar agente existente
         logger.info(f"Updating existing agent: {args.resource_id}")
@@ -113,9 +113,20 @@ def deploy_agent(args) -> None:
         )
         
         logger.info(f"Successfully updated agent: {args.resource_id}")
+    elif args.delete and args.resource_id:
+        try:
+            resource_id: str = args.resource_id
+            logger.info(f"Deleting agent: {resource_id}")
+            remote_agent = agent_engines.get(resource_id)
+            remote_agent.delete(force=True)
+            logger.info(f"Successfully deleted remote agent: {resource_id}")
+        except google_exceptions.NotFound:
+            logger.error(f"Agent with resource ID {resource_id} not found.")
+        except Exception as e:
+            logger.error(f"An error occurred while deleting agent {resource_id}: {e}")
     else:
         logger.error("Invalid arguments. Use --create to create new agent or --update with --resource-id to update existing agent.")
 
 if __name__ == "__main__":
-    args = parse_arguments()
+    args: argparse.Namespace = parse_arguments()
     deploy_agent(args)
