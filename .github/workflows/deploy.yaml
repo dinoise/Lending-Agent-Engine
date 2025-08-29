@@ -52,6 +52,8 @@ jobs:
           GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
+          URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
+          KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
         run: |
           echo "🚀 Iniciando despliegue en producción..."
           echo "🔧 Variables de entorno configuradas"
@@ -70,6 +72,8 @@ jobs:
           GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
           GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
+          URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
+          KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."
           echo "🔧 Variables de entorno configuradas"
