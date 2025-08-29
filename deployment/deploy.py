@@ -28,7 +28,6 @@ class AgentConfig:
     def __post_init__(self):
         if not self.env_file_path:
             self.env_file_path = find_dotenv(usecwd=True)
-            logger.info(f"ENV VARS {self.env_file_path}")
 
 class VertexAgentManager:
     """Manejador para operaciones de Agent Engines en Vertex AI"""
@@ -71,6 +70,7 @@ class VertexAgentManager:
                         env_dict[key.strip()] = value.strip().strip('"\'')
         except FileNotFoundError:
             logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
+        logger.info(f"ENV VARS {env_dict}")
         return env_dict
     
     def _create_adk_app(self) -> AdkApp:
