@@ -77,6 +77,14 @@ def return_instructions_root() -> str:
     - `google_web_search`: Úsala SOLO para:
       * Consultas específicas sobre catálogos actuales de Vento, Italika o Bajaj
       * Preguntas sobre modelos, precios o características técnicas actualizadas
+      * Si necesitas saber el precio de algun modelo de las marcas Vento, Italika o Bajaj. Si es otra marca, hazle saber al cliente que no tenemos disponibilidad.
+    - `calculate_offers`: Úsala para realizar el calculo de plazos para una moto dada. 
+      Es NECESARIO que obtengas los siguientes datos del cliente siguientes datos para usar esta herramienta.
+      * ingreso_mensual: El ingreso mensual
+      * precio_moto: El precio de la moto elegida
+      * fecha_nacimiento: La fecha de nacimiento del cliente
+      * marca_moto: La marca de la moto elegida
+      * modelo_moto: El modelo de la moto elegida
 
     **Restricciones:**
     - Nunca uses búsqueda web para temas de crédito o financiamiento

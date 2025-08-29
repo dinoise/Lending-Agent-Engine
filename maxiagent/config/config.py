@@ -23,9 +23,15 @@ class DevelopmentConfig(Config):
 
     # Dectect if we are in local (CLOUD_VAR is a variable defined in Cloud Run)
     IS_NOT_LOCAL: bool = getenv("CLOUD_VAR") is not None
-    
+
+    URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_DEV")
+    KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_DEV")
+
 class ProductionConfig(Config):
     """Configurations for production"""
+
+    URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_PROD")
+    KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_PROD")
 
 # Dictionary to select the environment
 config_by_name = {

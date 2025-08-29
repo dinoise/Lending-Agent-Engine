@@ -33,7 +33,7 @@ class VertexAgentManager:
     """Manejador para operaciones de Agent Engines en Vertex AI"""
     
     # Paquetes requeridos estándar
-    BASE_REQUIREMENTS = [
+    BASE_REQUIREMENTS: list[str] = [
         "google-cloud-aiplatform[adk,agent-engines]",
         "google-adk",
         "python-dotenv",

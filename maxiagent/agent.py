@@ -2,7 +2,8 @@ from . import current_config
 
 from .prompts import return_instructions_root
 from .tools import (rag_response, 
-                    google_web_search)
+                    google_web_search,
+                    calculate_offers)
 
 from google.adk.agents import Agent
 
@@ -12,6 +13,7 @@ root_agent = Agent(
     instruction=return_instructions_root(),
     tools=[
         rag_response,
-        google_web_search
+        google_web_search,
+        calculate_offers
     ]
 )
