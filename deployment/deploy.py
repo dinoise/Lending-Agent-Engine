@@ -28,6 +28,7 @@ class AgentConfig:
     def __post_init__(self):
         if not self.env_file_path:
             self.env_file_path = find_dotenv(usecwd=True)
+            logger.info(f"ENV VARS {self.env_file_path}")
 
 class VertexAgentManager:
     """Manejador para operaciones de Agent Engines en Vertex AI"""
