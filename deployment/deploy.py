@@ -78,7 +78,8 @@ class VertexAgentManager:
                 if key not in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]:
                     env_dict[key] = value
                     
-        logger.info(f"ENV VARS {env_dict}. Len of ENV VARS {len(env_dict)}")
+        logger.info(f"ENV VARS {env_dict}.")
+        logger.info(f"Len of ENV VARS {len(env_dict)}")
         return env_dict
     
     def _create_adk_app(self) -> AdkApp:
