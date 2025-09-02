@@ -70,13 +70,19 @@ class VertexAgentManager:
                         env_dict[key.strip()] = value.strip().strip('"\'')
         except FileNotFoundError:
             logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
-            # Cargar variables de entorno usando load_dotenv
-            load_dotenv()
+            # En GitHub Actions, usar las variables ya disponibles en os.environ
+            # pero filtrando solo las que necesitamos
+            required_vars: list[str] = [
+                "AGENT_ENGINE_ID", "STAGING_BUCKET", "RAG_CORPUS", 
+                "GOOGLE_CSE_ID", "GOOGLE_SEARCH_API_KEY", "ROOT_AGENT_MODEL",
+                "URL_CALCULADORA_DEV", "KEY_CALCULADORA_DEV"
+            ]
             
-            # Obtener todas las variables de entorno y filtrar las de Google Cloud
-            for key, value in os.environ.items():
-                if key not in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]:
-                    env_dict[key] = value
+            for var_name in required_vars:
+                if var_name in os.environ:
+                    env_dict[var_name] = os.environ[var_name]
+                else:
+                    logger.warning(f"Variable de entorno requerida no encontrada: {var_name}")
                     
         logger.info(f"ENV VARS {env_dict}.")
         logger.info(f"Len of ENV VARS {len(env_dict)}")
