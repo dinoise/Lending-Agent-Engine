@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
 from google.api_core import exceptions as google_exceptions
-from dotenv import set_key, find_dotenv
+from dotenv import set_key, find_dotenv, load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -27,7 +27,7 @@ class AgentConfig:
 
     def __post_init__(self):
         if not self.env_file_path:
-            self.env_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+            self.env_file_path = find_dotenv(usecwd=True)
 
 class VertexAgentManager:
     """Manejador para operaciones de Agent Engines en Vertex AI"""
@@ -70,6 +70,14 @@ class VertexAgentManager:
                         env_dict[key.strip()] = value.strip().strip('"\'')
         except FileNotFoundError:
             logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
+            # Cargar variables de entorno usando load_dotenv
+            load_dotenv()
+            
+            # Obtener todas las variables de entorno y filtrar las de Google Cloud
+            for key, value in os.environ.items():
+                if key not in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]:
+                    env_dict[key] = value
+                    
         logger.info(f"ENV VARS {env_dict}")
         return env_dict
     
