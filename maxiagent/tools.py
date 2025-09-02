@@ -8,7 +8,10 @@ from .utils import get_page_content
 from googleapiclient.discovery import build
 from vertexai.preview import rag
 
+from google.adk.tools.tool_context import ToolContext
 from google.cloud.aiplatform_v1beta1.types.vertex_rag_service import RetrieveContextsResponse
+
+from typing import Any
 
 def rag_response(query: str) -> str:
     """Retorna información contextual relevante desde el Curpus RAG.
@@ -66,51 +69,99 @@ def google_web_search(query: str) -> dict:
     
     return {"status": "success", "results": results}
 
-def calculate_offers(
-        ingreso_mensual: float,
-        precio_moto: float,
-        fecha_nacimiento: str,
-        marca_moto: str,
-        modelo_moto: str
-) -> list:
-    """Calcula ofertas de financiamiento para motocicletas basado en ingresos y características del vehículo.
+def save_ingreso_mensual(tool_context: ToolContext, ingreso_mensual: float) -> dict[str, Any]:
+    """Guarda el ingreso mensual en el estado de la sesión."""
+    tool_context.state["ingreso_mensual"] = ingreso_mensual
+    return {"estado": "Ingreso mensual guardado", "valor": ingreso_mensual}
+
+def save_precio_moto(tool_context: ToolContext, precio_moto: float) -> dict[str, Any]:
+    """Guarda el precio de la moto en el estado de la sesión."""
+    tool_context.state["precio_moto"] = precio_moto
+    return {"estado": "Precio de moto guardado", "valor": precio_moto}
+
+def save_fecha_nacimiento(tool_context: ToolContext, fecha_nacimiento: str) -> dict[str, Any]:
+    """Guarda la fecha de nacimiento en el estado de la sesión."""
+    tool_context.state["fecha_nacimiento"] = fecha_nacimiento
+    return {"estado": "Fecha de nacimiento guardada", "valor": fecha_nacimiento}
+
+def save_marca_moto(tool_context: ToolContext, marca_moto: str) -> dict[str, Any]:
+    """Guarda la marca de la moto en el estado de la sesión."""
+    tool_context.state["marca_moto"] = marca_moto
+    return {"estado": "Marca de moto guardada", "valor": marca_moto}
+
+def save_modelo_moto(tool_context: ToolContext, modelo_moto: str) -> dict[str, Any]:
+    """Guarda el modelo de la moto en el estado de la sesión."""
+    tool_context.state["modelo_moto"] = modelo_moto
+    return {"estado": "Modelo de moto guardado", "valor": modelo_moto}
+
+def check_quotation_status(tool_context: ToolContext) -> dict[str, Any]:
+    """Verifica qué datos faltan para la cotización."""
+    state = tool_context.state
+    missing_data = []
     
-    Args:
-        ingreso_mensual: Ingreso mensual del cliente en pesos mexicanos
-        precio_moto: Precio de la motocicleta en pesos mexicanos
-        fecha_nacimiento: Fecha de nacimiento del cliente en formato DD/MM/YY
-        marca_moto: Marca de la motocicleta (ej. Honda, Yamaha, etc.)
-        modelo_moto: Modelo específico de la motocicleta
-        
+    if not state.get("ingreso_mensual"):
+        missing_data.append("ingreso_mensual")
+    if not state.get("precio_moto"):
+        missing_data.append("precio_moto")
+    if not state.get("fecha_nacimiento"):
+        missing_data.append("fecha_nacimiento")
+    if not state.get("marca_moto"):
+        missing_data.append("marca_moto")
+    if not state.get("modelo_moto"):
+        missing_data.append("modelo_moto")
+    
+    return {
+        "datos_completos": len(missing_data) == 0,
+        "datos_faltantes": missing_data,
+        "datos_actuales": {
+            "ingreso_mensual": state.get("ingreso_mensual"),
+            "precio_moto": state.get("precio_moto"),
+            "fecha_nacimiento": state.get("fecha_nacimiento"),
+            "marca_moto": state.get("marca_moto"),
+            "modelo_moto": state.get("modelo_moto")
+        }
+    }
+
+def calculate_quotation(tool_context: ToolContext) -> list:
+    """Calcula ofertas de financiamiento usando los datos del estado de la sesión.
+    
     Returns:
-        Dict con las opciones de financiamiento calculadas
+        Lista con las opciones de financiamiento calculadas
     """
+    state = tool_context.state
+    
+    # Verificar que todos los datos estén presentes
+    required_fields = ["ingreso_mensual", "precio_moto", "fecha_nacimiento", "marca_moto", "modelo_moto"]
+    missing_fields = [field for field in required_fields if field not in state or not state[field]]
+    
+    if missing_fields:
+        return [{"error": f"Datos faltantes: {', '.join(missing_fields)}"}]
+    
     headers = {
         'Content-Type': 'application/json',
-        'User-Agent': 'Python-HTTP-Post-Cli ent/1.0',
+        'User-Agent': 'Python-HTTP-Post-Client/1.0',
         'Authorization': current_config.KEY_CALCULADORA,
         'usuario': ''
     }
 
     data: dict = {
-        "ingresoMensual": ingreso_mensual,
-        "precioMoto": precio_moto,
+        "ingresoMensual": state["ingreso_mensual"],
+        "precioMoto": state["precio_moto"],
         "garantia": None,
-        "fechaNacimiento": fecha_nacimiento,
+        "fechaNacimiento": state["fecha_nacimiento"],
         "idMunicipio": 1,
         "idEstado": 1,
         "codigoPostal": "06850",
         "idSucursal": 1,
         "idDistribuidor": 1,
-        "marcaMoto": marca_moto,
-        "modeloMoto": modelo_moto,
+        "marcaMoto": state["marca_moto"],
+        "modeloMoto": state["modelo_moto"],
         "fechaHoraCreacionOferta": datetime.now().strftime("%d/%m/%Y %H:%M"),
         "idUsuarioCreacion": "111",
         "idOferta": "111",
         "idPais": "MX"
     }
     
-
     try:
         response: requests.Response = requests.post(
             url=current_config.URL_CALCULADORA,
@@ -118,19 +169,13 @@ def calculate_offers(
             headers=headers,
             timeout=30
         )
-        print("RESPOSNEEE ", response)
         response.raise_for_status()
         
         try:
             return response.json()["output"]["calculos"]
-        except json.JSONDecodeError:
-            print( response.text )
-            return []
-        except Exception:
-            print( response.text )
-            return []
+        except (json.JSONDecodeError, KeyError):
+            return [{"error": "Error procesando la respuesta del servidor"}]
             
     except requests.exceptions.RequestException as e:
-        print( f"ERROR {e}" )
-        return []
-     
+        return [{"error": f"Error de conexión: {str(e)}"}]
+    
