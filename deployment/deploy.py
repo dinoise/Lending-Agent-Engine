@@ -72,11 +72,32 @@ class VertexAgentManager:
             logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
             # En GitHub Actions, usar las variables ya disponibles en os.environ
             # pero filtrando solo las que necesitamos
-            required_vars: list[str] = [
-                "AGENT_ENGINE_ID", "STAGING_BUCKET", "RAG_CORPUS", 
-                "GOOGLE_CSE_ID", "GOOGLE_SEARCH_API_KEY", "ROOT_AGENT_MODEL",
-                "URL_CALCULADORA_DEV", "KEY_CALCULADORA_DEV"
-            ]
+            env: str = os.environ["ENV"]
+
+            if env == "prod":
+                required_vars: list[str] = [
+                    "ENV", 
+                    "AGENT_ENGINE_ID", 
+                    "STAGING_BUCKET",
+                    "RAG_CORPUS",
+                    "GOOGLE_CSE_ID", 
+                    "GOOGLE_SEARCH_API_KEY", 
+                    "ROOT_AGENT_MODEL",
+                    "URL_CALCULADORA_PROD", 
+                    "KEY_CALCULADORA_PROD"
+                ]
+            else:
+                required_vars: list[str] = [
+                    "ENV", 
+                    "AGENT_ENGINE_ID", 
+                    "STAGING_BUCKET",
+                    "RAG_CORPUS",
+                    "GOOGLE_CSE_ID", 
+                    "GOOGLE_SEARCH_API_KEY", 
+                    "ROOT_AGENT_MODEL",
+                    "URL_CALCULADORA_DEV", 
+                    "KEY_CALCULADORA_DEV"
+                ]
             
             for var_name in required_vars:
                 if var_name in os.environ:

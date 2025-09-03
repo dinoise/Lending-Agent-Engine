@@ -23,7 +23,7 @@ def return_instructions_root() -> str:
         * Cuando te den el modelo de la moto, mandalo a la función 'save_modelo_moto'.
     - Usa 'check_quotation_status' para verificar qué datos faltan.
     - Nota: A veces el cliente puede dar los datos de la moto con este formato: [marca] [modelo].
-      Por ejemplos: Italika DM250 Negro. Vento Axus 170.
+      Ejemplos: Italika DM250 Negro. Vento Axus 170.
       Asegurate de extraer bien los datos de marca y modelo si se da el caso donde den los datos en ese formato.
 
     **Funcionalidades Clave:**
