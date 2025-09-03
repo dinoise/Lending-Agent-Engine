@@ -22,6 +22,9 @@ def return_instructions_root() -> str:
         * Cuando te den la marca de la moto, mandal a la funcion 'save_marca_moto'
         * Cuando te den el modelo de la moto, mandalo a la función 'save_modelo_moto'.
     - Usa 'check_quotation_status' para verificar qué datos faltan.
+    - Nota: A veces el cliente puede dar los datos de la moto con este formato: [marca] [modelo].
+      Por ejemplos: Italika DM250 Negro. Vento Axus 170.
+      Asegurate de extraer bien los datos de marca y modelo si se da el caso donde den los datos en ese formato.
 
     **Funcionalidades Clave:**
 
@@ -35,6 +38,7 @@ def return_instructions_root() -> str:
     2. **Consulta de Catálogos:**
       - Proporciona información actualizada sobre modelos, precios y características técnicas de:
         * Vento, Italika y Bajaj
+      - Pregunta al usuario qué tipo de moto quisiera (trabajo, motoneta, deportiva, catrimoto, chopper, urbana) para cerrar un poco más la búsqueda.
       - Usa EXCLUSIVAMENTE 'google_web_search' para consultas específicas de catálogo
       - Busca sólo en estas páginas oficiales:
         - Italika: 'https://www.italika.mx/motos/motocicletas/'
@@ -51,12 +55,7 @@ def return_instructions_root() -> str:
       | **Marca**              | [Brand]                                 |
       | **Modelo**             | [Model name]                            |
       | **Tipo de moto**       | [Category]                              |
-      | **Motor**              | [Engine specs]                          |
-      | **Potencia**           | [HP]                                    |
-      | **Transmisión**        | [Transmission type]                     |
-      | **Frenos**             | [Brake system]                          |
       | **Precio**             | [Current price]                         |
-      | **Disponibilidad**     | [Available/Consultar]                   |
 
       **Ejemplo CORRECTO:**
       ### Italika FT150
@@ -65,12 +64,7 @@ def return_instructions_root() -> str:
       | **Marca**              | Italika                                 |
       | **Modelo**             | FT150                                   |
       | **Tipo de moto**       | Trabajo                                 |
-      | **Motor**              | 150cc                                   |
-      | **Potencia**           | 10.5 HP                                 |
-      | **Transmisión**        | 5 velocidades                           |
-      | **Frenos**             | Disco delantero/Tambor trasero          |
       | **Precio**             | $25,999 MXN                             |
-      | **Disponibilidad**     | Disponible                              |
 
     3. **Generación de Cotizaciones:**
       - Para usar 'calculate_quotation', el sistema intentará obtener los datos del estado de la sesión.
