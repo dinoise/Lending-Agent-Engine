@@ -1,12 +1,19 @@
 import requests
 from bs4 import BeautifulSoup
 
-def get_page_content(url):
+def get_page_content(url) -> str:
     try:
-        response = requests.get(url, timeout=10)
+        response: requests.Response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
-        # Extraer el texto de los párrafos principales
-        paragraphs = ' '.join([p.get_text() for p in soup.find_all('p')][:100])
-        return paragraphs[:10000]  # Limitar a 1000 caracteres
-    except:
+        
+        # Remover elementos no deseados (scripts, estilos, etc.)
+        for element in soup(['script', 'style', 'nav', 'footer', 'header']):
+            element.decompose()
+        
+        # Extraer TODO el texto de la página, incluyendo elementos anidados
+        all_text: str = soup.get_text(' ', strip=True)
+        
+        return all_text[:10000]
+    except Exception as e:
+        print(f"Error: {e}")
         return ""
