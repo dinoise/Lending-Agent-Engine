@@ -24,8 +24,10 @@ class AgentConfig:
     location: str
     staging_bucket: str
     env_file_path: str | None = None
+    env: str = 'dev'
 
     def __post_init__(self):
+        logger.info(f"USING ENV {self.env}")
         if not self.env_file_path:
             self.env_file_path = find_dotenv(usecwd=True)
 
@@ -72,30 +74,30 @@ class VertexAgentManager:
             logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
             # En GitHub Actions, usar las variables ya disponibles en os.environ
             # pero filtrando solo las que necesitamos
-            env: str = os.environ["ENV"]
+            env: str = self.config.env
 
             if env == "prod":
                 required_vars: list[str] = [
-                    "ENV", 
-                    "AGENT_ENGINE_ID", 
+                    "ENV",
+                    "AGENT_ENGINE_ID",
                     "STAGING_BUCKET",
                     "RAG_CORPUS",
-                    "GOOGLE_CSE_ID", 
-                    "GOOGLE_SEARCH_API_KEY", 
+                    "GOOGLE_CSE_ID",
+                    "GOOGLE_SEARCH_API_KEY",
                     "ROOT_AGENT_MODEL",
-                    "URL_CALCULADORA_PROD", 
+                    "URL_CALCULADORA_PROD",
                     "KEY_CALCULADORA_PROD"
                 ]
             else:
                 required_vars: list[str] = [
-                    "ENV", 
-                    "AGENT_ENGINE_ID", 
+                    "ENV",
+                    "AGENT_ENGINE_ID",
                     "STAGING_BUCKET",
                     "RAG_CORPUS",
-                    "GOOGLE_CSE_ID", 
-                    "GOOGLE_SEARCH_API_KEY", 
+                    "GOOGLE_CSE_ID",
+                    "GOOGLE_SEARCH_API_KEY",
                     "ROOT_AGENT_MODEL",
-                    "URL_CALCULADORA_DEV", 
+                    "URL_CALCULADORA_DEV",
                     "KEY_CALCULADORA_DEV"
                 ]
             
@@ -177,6 +179,7 @@ def main() -> None:
     parser.add_argument('--delete', action='store_true', help='Delete an agent')
     parser.add_argument('--update', action='store_true', help='Update an agent')
     parser.add_argument('--resource-id', type=str, help='Agent resource ID')
+    parser.add_argument('--env', type=str, help='Environment (dev or prod)')
     
     args: argparse.Namespace = parser.parse_args()
     
@@ -185,16 +188,17 @@ def main() -> None:
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         location=os.getenv("GOOGLE_CLOUD_LOCATION"),
         staging_bucket=os.getenv("STAGING_BUCKET"),
+        env=args.env
     )
     
     manager = VertexAgentManager(config)
     
     try:
-        if args.create and args.display_name:
+        if args.create and args.display_name and args.env:
             manager.create_agent(args.display_name)
-        elif args.update and args.resource_id:
+        elif args.update and args.resource_id and args.env:
             manager.update_agent(args.resource_id)
-        elif args.delete and args.resource_id:
+        elif args.delete and args.resource_id and args.env:
             manager.delete_agent(args.resource_id)
         else:
             logger.error("Comando no válido. Verifica los argumentos.")
