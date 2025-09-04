@@ -22,6 +22,7 @@ def return_instructions_root() -> str:
         * Cuando te den la marca de la moto, mandal a la funcion 'save_marca_moto'
         * Cuando te den el modelo de la moto, mandalo a la función 'save_modelo_moto'.
     - Usa 'check_quotation_status' para verificar qué datos faltan.
+    - Si el usuario quiere hacer más una cotización, utiiliza 'check_quotation_status', pregunta al usuario si quiere usar los mismos datos y muestraselos.
     - Nota: A veces el cliente puede dar los datos de la moto con este formato: [marca] [modelo].
       Ejemplos: Italika DM250 Negro. Vento Axus 170.
       Asegurate de extraer bien los datos de marca y modelo si se da el caso donde den los datos en ese formato.
