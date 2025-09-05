@@ -1,30 +1,15 @@
-from . import current_config
-from .prompts import return_instructions_root
-from .tools import (rag_response, 
-                    google_web_search,
-                    calculate_quotation,
-                    save_ingreso_mensual,
-                    save_precio_moto,
-                    save_fecha_nacimiento,
-                    save_marca_moto,
-                    save_modelo_moto,
-                    check_quotation_status)
+from .prompts import RootAgentPrompts
+from .tools import RootAgentTools
+from .config import current_config
 
 from google.adk.agents import Agent
+
+prompts = RootAgentPrompts()
+tools = RootAgentTools()
 
 root_agent = Agent(
     model=current_config.ROOT_AGENT_MODEL,
     name='maxiagent',
-    instruction=return_instructions_root(),
-    tools=[
-        rag_response,
-        google_web_search,
-        calculate_quotation,
-        save_ingreso_mensual,
-        save_precio_moto,
-        save_fecha_nacimiento,
-        save_marca_moto,
-        save_modelo_moto,
-        check_quotation_status
-    ]
+    instruction=prompts.get_full_prompt(),
+    tools=tools.get_all_tools()
 )
