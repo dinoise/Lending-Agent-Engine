@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Text, UUID, DateTime, func
 from pgvector.sqlalchemy import Vector
-from database import Base
+
+from ..database import Base
 
 class EmbeddingData(Base):
     __tablename__: str = 'tb_mk_embedding_data'

@@ -6,15 +6,14 @@ from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from sqlalchemy.engine import Engine
 
 from urllib.parse import quote_plus
-from typing import Dict, Any
 
 # Bases declarativas para cada base de datos
 Base = declarative_base()
 BaseMetadata = declarative_base()
 
 # Diccionarios para almacenar los engines y sesiones
-engines: Dict[str, Any] = {}
-db_sessions: Dict[str, Any] = {}
+engine: Engine | None = None
+db_session: scoped_session | None = None
 
 def init_db() -> None:
     # Configuración para la base de datos primaria
@@ -27,7 +26,7 @@ def init_db() -> None:
     }, Base)
 
 def configure_database(db_name: str, config: dict, base) -> None:
-    global engines, db_sessions
+    global engine, db_session
     
     PG_HOST = config['PG_HOST']
     PG_PORT = config['PG_PORT']
@@ -42,20 +41,23 @@ def configure_database(db_name: str, config: dict, base) -> None:
     uri: str = f'postgresql+psycopg2://{PG_USER}:{encoded_pg_password}@{PG_HOST}:{PG_PORT}/{PG_NAME}'
 
     try:
-        engines[db_name] = create_engine(uri)
+        engine = create_engine(
+            uri,
+            connect_args={'options': f'-c search_path=public'}
+)
         
         # Configura la sesión
-        db_sessions[db_name] = scoped_session(sessionmaker(
+        db_session = scoped_session(sessionmaker(
             autocommit=False,
             autoflush=False,
-            bind=engines[db_name]
+            bind=engine
         ))
         
         # Conecta la Base con el engine
-        base.metadata.bind = engines[db_name]
+        base.metadata.bind = engine
         
         # Prueba la conexión
-        with engines[db_name].connect() as conn:
+        with engine.connect() as conn:
             print(f"✅ Conexión a la base de datos {db_name} establecida correctamente")
             
     except Exception as e:
@@ -63,12 +65,12 @@ def configure_database(db_name: str, config: dict, base) -> None:
         raise
 
 # Funciones para obtener sesiones específicas
-def get_db_session(db_name='rag_corpus_maxikash') -> scoped_session:
-    if db_name not in db_sessions:
+def get_db_session(db_name='rag_corpus_maxikash') -> scoped_session | None:
+    if not db_session:
         raise RuntimeError(f"La base de datos {db_name} no ha sido inicializada. Llama a init_db() primero.")
-    return db_sessions[db_name]
+    return db_session
 
-def get_engine(db_name='rag_corpus_maxikash') -> Engine:
-    if db_name not in engines:
+def get_engine(db_name='rag_corpus_maxikash') -> Engine | None:
+    if not engine:
         raise RuntimeError(f"El engine para {db_name} no ha sido inicializado. Llama a init_db() primero.")
-    return engines[db_name]
+    return engine

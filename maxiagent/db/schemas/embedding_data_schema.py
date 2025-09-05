@@ -24,4 +24,4 @@ class EmbeddingDataSchema(SQLAlchemyAutoSchema):
 
     class Meta:
         model = EmbeddingData
-        only: tuple = ('embedding_embedded_text',)
+        only: tuple = ('embedding_data_text',)

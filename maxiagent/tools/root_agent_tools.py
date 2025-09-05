@@ -6,9 +6,9 @@ from typing import Any, List, Callable, Dict
 
 from ..config import current_config
 from ..utils import get_page_content
-from ..db import get_db_session
-from ..db.models import EmbeddingData
-from ..db.schemas import EmbeddingDataSchema
+from ..db import (get_db_session,
+                  EmbeddingData,
+                  EmbeddingDataSchema)
 
 from googleapiclient.discovery import build
 from google.adk.tools.tool_context import ToolContext
@@ -218,7 +218,7 @@ class RootAgentTools:
         self,
         query_str: str,
         similarity_threshold: float = 0.5,
-        top_k: int = 5
+        top_k: int = 1
     ):
         """
         Realiza una búsqueda semántica en la base de datos utilizando embeddings de texto.
@@ -241,22 +241,21 @@ class RootAgentTools:
                 los documentos más similares encontrados en la base de datos.
         """
         db = get_db_session()
+        if not db:
+            raise Exception("Inicializa la base de datos primero.")
         
         try:
             # Generar el embedding de la consulta
             embedding_service = VertexAIEmbeddings(
                 model_name=current_config.EMBEDDING_MODEL_NAME
             )
-            query_embedding = embedding_service.embed_query(query_str)
+            query_embedding: List[float] = embedding_service.embed_query(query_str)
             
             # Usar la función de distancia correcta
-            distance = func.cosine_distance(
-                EmbeddingData.embedding_embedded_text, 
-                query_embedding
-            )
+            distance = EmbeddingData.embedding_embedded_text.cosine_distance(query_embedding)
             
             results = db.query(
-                EmbeddingData,
+                EmbeddingData.embedding_data_text,
                 distance.label('similarity')
             ).filter(
                 distance < similarity_threshold
@@ -265,12 +264,8 @@ class RootAgentTools:
             ).limit(
                 top_k
             ).all()
-            
-            # Extraer solo los objetos EmbeddingData (sin la distancia)
-            embedding_objects = [result[0] for result in results]
-            
-            return EmbeddingDataSchema(many=True).dump(embedding_objects)
-            
+                        
+            return EmbeddingDataSchema(many=True).dump(results)
         except Exception as e:
             print(f"Error al realizar la búsqueda semántica: {e}")
             raise
