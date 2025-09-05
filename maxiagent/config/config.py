@@ -1,7 +1,7 @@
 from os import getenv
 from dotenv import load_dotenv
 
-load_dotenv()  # take environment variables
+load_dotenv()
 
 class Config:
     """Configuraciones comunes"""
@@ -27,11 +27,25 @@ class DevelopmentConfig(Config):
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_DEV")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_DEV")
 
+    # Configuration for PostgreSQL
+    PG_HOST = "POSTGRE_IP_PRIVATE" if IS_NOT_LOCAL else "POSTGRE_IP_PUBLIC"
+    PG_PORT = "POSTGRE_PORT"
+    PG_USER = "POSTGRE_USR_RAG_REPO_DEV"
+    PG_PASSWORD = "POSTGRE_PASS_RAG_REPO_DEV"
+    PG_NAME = "POSTGRE_DB_RAG_REPO"
+
 class ProductionConfig(Config):
     """Configurations for production"""
 
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_PROD")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_PROD")
+
+    # Configuration for PostgreSQL
+    PG_HOST = "POSTGRE_IP_PRIVATE"
+    PG_PORT = "POSTGRE_PORT"
+    PG_USER = "POSTGRE_USR_RAG_REPO_DEV"
+    PG_PASSWORD = "POSTGRE_PASS_RAG_REPO_DEV"
+    PG_NAME = "POSTGRE_DB_RAG_REPO"
 
 # Dictionary to select the environment
 config_by_name = {
