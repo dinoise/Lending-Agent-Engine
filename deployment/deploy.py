@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
 from google.api_core import exceptions as google_exceptions
-from dotenv import set_key, find_dotenv, load_dotenv
+from dotenv import set_key, find_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from maxiagent.agent import root_agent
+from maxiagent.agent.agent import root_agent
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ def main() -> None:
             manager.create_agent(args.display_name)
         elif args.update and args.resource_id and args.env:
             manager.update_agent(args.resource_id)
-        elif args.delete and args.resource_id and args.env:
+        elif args.delete and args.resource_id:
             manager.delete_agent(args.resource_id)
         else:
             logger.error("Comando no válido. Verifica los argumentos.")
