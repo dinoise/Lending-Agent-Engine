@@ -68,7 +68,7 @@ def get_db_session(db_name='rag_corpus_maxikash') -> scoped_session:
         raise RuntimeError(f"La base de datos {db_name} no ha sido inicializada. Llama a init_db() primero.")
     return db_sessions[db_name]
 
-def get_engine(db_name='poc_data') -> Engine:
+def get_engine(db_name='rag_corpus_maxikash') -> Engine:
     if db_name not in engines:
         raise RuntimeError(f"El engine para {db_name} no ha sido inicializado. Llama a init_db() primero.")
     return engines[db_name]
