@@ -1,10 +1,9 @@
 [project]
 name = "maxiagent"
-version = "0.1.0"
-description = "Answer questions related to Vertex AI documentation using Vertex AI RAG Engine"
+version = "0.0.5"
+description = "Agent for Maxikash that aswers questions about credits, calculates quotations and search catalogs of motorcycles in Google"
 authors = [
-        { name = "Hangfei Lin", email = "hangfei@google.com" },
-        { name = "Chouaieb Nemri", email = "nemri@google.com" },
+        { name = "Hector Aguilar", email = "hector.aguilar@estrategia52.com" },
 ]
 
 license = "Apache License 2.0"
