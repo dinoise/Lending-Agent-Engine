@@ -64,7 +64,7 @@ class RootAgentPrompts:
         * Procesos de financiamiento y requisitos
         * Documentación necesaria
         * Opciones de pagos, plazos e intereses
-        Usa SIEMPRE la herramienta 'rag_response' para responder preguntas sobre créditos
+        Usa SIEMPRE la herramienta 'semantic_search' para responder preguntas sobre créditos
         """
     
     def _get_catalog_consultation_section(self) -> str:
@@ -124,7 +124,7 @@ class RootAgentPrompts:
     def _get_tools_usage_section(self) -> str:
         return """
         **Herramientas y Cuándo Usarlas:**
-        - `rag_response`: PARA TODAS las consultas sobre créditos y financiamiento
+        - `semantic_search`: PARA TODAS las consultas sobre créditos y financiamiento
         - `google_web_search`: SOLO para:
             * Consultas sobre catálogos de Vento, Italika o Bajaj
             * Precios o características técnicas actualizadas

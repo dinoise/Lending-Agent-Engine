@@ -18,6 +18,8 @@ class Config:
 
     GOOGLE_CSE_ID: str | None = getenv("GOOGLE_CSE_ID")
 
+    EMBEDDING_MODEL_NAME: str | None = getenv("EMBEDDING_MODEL_NAME")
+
 class DevelopmentConfig(Config):
     """Configurations for development"""
 

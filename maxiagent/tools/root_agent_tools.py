@@ -1,25 +1,26 @@
 import requests
 import json
+
 from datetime import datetime
 from typing import Any, List, Callable, Dict
 
 from ..config import current_config
 from ..utils import get_page_content
+from ..db import get_db_session
+from ..db.models import EmbeddingData
+from ..db.schemas import EmbeddingDataSchema
 
 from googleapiclient.discovery import build
-from vertexai.preview import rag
-
 from google.adk.tools.tool_context import ToolContext
-from google.cloud.aiplatform_v1beta1.types.vertex_rag_service import RetrieveContextsResponse
+
+from langchain_google_vertexai import VertexAIEmbeddings
+from sqlalchemy import func
 
 class RootAgentTools:
     """Clase para gestionar y organizar las herramientas del agente."""
     
     def __init__(self):
         self._tools = {
-            'rag_tools': {
-                'rag_response': self.rag_response
-            },
             'search_tools': {
                 'google_web_search': self.google_web_search
             },
@@ -33,6 +34,9 @@ class RootAgentTools:
             },
             'calculation_tools': {
                 'calculate_quotation': self.calculate_quotation
+            },
+            'database_tools': {
+                'semantic_search': self.semantic_search
             }
         }
     
@@ -65,33 +69,6 @@ class RootAgentTools:
                     'function': tool_func
                 })
         return descriptions
-
-    # --- Herramientas RAG ---
-    def rag_response(self, query: str) -> str:
-        """Retorna información contextual relevante desde el Curpus RAG.
-
-        Args:
-            query (str): El término de búsqueda.
-
-        Returns:
-            str: La respuesta conteniendo la información obtenida del corpus.
-        """
-        corpus_name = current_config.RAG_CORPUS
-
-        rag_retrieval_config = rag.RagRetrievalConfig(
-            top_k=3,
-            filter=rag.Filter(vector_distance_threshold=0.5),
-        )
-        response: RetrieveContextsResponse = rag.retrieval_query(
-            rag_resources=[
-                rag.RagResource(
-                    rag_corpus=corpus_name,
-                )
-            ],
-            text=query,
-            rag_retrieval_config=rag_retrieval_config,
-        )
-        return str(response)
 
     # --- Herramientas de Búsqueda ---
     def google_web_search(self, query: str) -> dict:
@@ -235,3 +212,67 @@ class RootAgentTools:
                 
         except requests.exceptions.RequestException as e:
             return [{"error": f"Error de conexión: {str(e)}"}]
+
+    # --- Herramientas para la base de datos ---
+    def semantic_search(
+        self,
+        query_str: str,
+        similarity_threshold: float = 0.5,
+        top_k: int = 5
+    ):
+        """
+        Realiza una búsqueda semántica en la base de datos utilizando embeddings de texto.
+
+        Esta función genera un embedding para la consulta de texto proporcionada y luego
+        busca los documentos más similares en la base de datos basándose en la
+        similitud coseno entre los vectores de embedding. Los resultados se filtran
+        por un umbral de similitud y se devuelven los mejores k resultados.
+
+        Args:
+            query_str (str): Texto de consulta para la búsqueda semántica.
+            similarity_threshold (float, optional): Umbral de similitud para filtrar 
+                resultados (0-1). Valores más bajos indican mayor similitud. 
+                Por defecto es 0.5.
+            top_k (int, optional): Número máximo de resultados a devolver. 
+                Por defecto es 5.
+
+        Returns:
+            list: Lista de objetos EmbeddingDataSchema serializados que representan
+                los documentos más similares encontrados en la base de datos.
+        """
+        db = get_db_session()
+        
+        try:
+            # Generar el embedding de la consulta
+            embedding_service = VertexAIEmbeddings(
+                model_name=current_config.EMBEDDING_MODEL_NAME
+            )
+            query_embedding = embedding_service.embed_query(query_str)
+            
+            # Usar la función de distancia correcta
+            distance = func.cosine_distance(
+                EmbeddingData.embedding_embedded_text, 
+                query_embedding
+            )
+            
+            results = db.query(
+                EmbeddingData,
+                distance.label('similarity')
+            ).filter(
+                distance < similarity_threshold
+            ).order_by(
+                distance.asc()  # Menor distancia = mayor similitud
+            ).limit(
+                top_k
+            ).all()
+            
+            # Extraer solo los objetos EmbeddingData (sin la distancia)
+            embedding_objects = [result[0] for result in results]
+            
+            return EmbeddingDataSchema(many=True).dump(embedding_objects)
+            
+        except Exception as e:
+            print(f"Error al realizar la búsqueda semántica: {e}")
+            raise
+        finally:
+            db.close()

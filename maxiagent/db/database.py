@@ -18,7 +18,7 @@ db_sessions: Dict[str, Any] = {}
 
 def init_db() -> None:
     # Configuración para la base de datos primaria
-    configure_database('poc_data', {
+    configure_database('rag_corpus_maxikash', {
         'PG_HOST': get_secret(current_config.PG_HOST),
         'PG_PORT': get_secret(current_config.PG_PORT),
         'PG_USER': get_secret(current_config.PG_USER),
@@ -63,7 +63,7 @@ def configure_database(db_name: str, config: dict, base) -> None:
         raise
 
 # Funciones para obtener sesiones específicas
-def get_db_session(db_name='poc_data') -> scoped_session:
+def get_db_session(db_name='rag_corpus_maxikash') -> scoped_session:
     if db_name not in db_sessions:
         raise RuntimeError(f"La base de datos {db_name} no ha sido inicializada. Llama a init_db() primero.")
     return db_sessions[db_name]
