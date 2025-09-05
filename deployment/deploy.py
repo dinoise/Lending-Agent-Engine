@@ -13,7 +13,7 @@ from dotenv import set_key, find_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from maxiagent.agent.agent import root_agent
+from maxiagent.agent import root_agent
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -43,7 +43,12 @@ class VertexAgentManager:
         "tqdm",
         "requests",
         "deprecated",
-        "llama_index"
+        "llama_index",
+        "langchain-google-vertexai",
+        "pgvector",
+        "SQLAlchemy",
+        "psycopg2-binary",
+        "marshmallow_sqlalchemy"
     ]
     
     def __init__(self, config: AgentConfig) -> None:
