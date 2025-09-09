@@ -20,7 +20,6 @@ class Config:
 
     EMBEDDING_MODEL_NAME: str | None = getenv("EMBEDDING_MODEL_NAME")
 
-    API_MAXIKASH: str | None = getenv("API_MAXIKASH")
 
 class DevelopmentConfig(Config):
     """Configurations for development"""
@@ -30,6 +29,8 @@ class DevelopmentConfig(Config):
 
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_DEV")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_DEV")
+
+    API_MAXIKASH: str | None = getenv("API_MAXIKASH_DEV")
 
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE" if IS_NOT_LOCAL else "POSTGRE_IP_PUBLIC"
@@ -43,6 +44,8 @@ class ProductionConfig(Config):
 
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_PROD")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_PROD")
+
+    API_MAXIKASH: str | None = getenv("API_MAXIKASH_PROD")
 
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE"
