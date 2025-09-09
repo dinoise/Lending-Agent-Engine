@@ -54,6 +54,7 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
           KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
+          API_MAXIKASH: ${{ secrets.API_MAXIKASH_PROD }}
         run: |
           echo "🚀 Iniciando despliegue en producción..."
           echo "🔧 Variables de entorno configuradas"
@@ -74,6 +75,7 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
           KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
+          API_MAXIKASH: ${{ secrets.API_MAXIKASH_DEV }}
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."
           echo "🔧 Variables de entorno configuradas"

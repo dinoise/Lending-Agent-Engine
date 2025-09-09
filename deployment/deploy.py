@@ -91,7 +91,8 @@ class VertexAgentManager:
                     "GOOGLE_SEARCH_API_KEY",
                     "ROOT_AGENT_MODEL",
                     "URL_CALCULADORA_PROD",
-                    "KEY_CALCULADORA_PROD"
+                    "KEY_CALCULADORA_PROD",
+                    "API_MAXIKASH_PROD"
                 ]
             else:
                 required_vars: list[str] = [
@@ -103,7 +104,8 @@ class VertexAgentManager:
                     "GOOGLE_SEARCH_API_KEY",
                     "ROOT_AGENT_MODEL",
                     "URL_CALCULADORA_DEV",
-                    "KEY_CALCULADORA_DEV"
+                    "KEY_CALCULADORA_DEV",
+                    "API_MAXIKASH_DEV"
                 ]
             
             for var_name in required_vars:

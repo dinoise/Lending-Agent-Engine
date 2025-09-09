@@ -20,6 +20,8 @@ class Config:
 
     EMBEDDING_MODEL_NAME: str | None = getenv("EMBEDDING_MODEL_NAME")
 
+    API_MAXIKASH: str | None = getenv("API_MAXIKASH")
+
 class DevelopmentConfig(Config):
     """Configurations for development"""
 

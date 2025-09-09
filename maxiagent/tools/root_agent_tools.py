@@ -6,15 +6,9 @@ from typing import Any, List, Callable, Dict
 
 from ..config import current_config
 from ..utils import get_page_content
-from ..db import (get_db_session,
-                  EmbeddingData,
-                  EmbeddingDataSchema)
 
 from googleapiclient.discovery import build
 from google.adk.tools.tool_context import ToolContext
-
-from langchain_google_vertexai import VertexAIEmbeddings
-from sqlalchemy import func
 
 class RootAgentTools:
     """Clase para gestionar y organizar las herramientas del agente."""
@@ -230,44 +224,28 @@ class RootAgentTools:
 
         Args:
             query_str (str): Texto de consulta para la búsqueda semántica.
-            similarity_threshold (float, optional): Umbral de similitud para filtrar 
-                resultados (0-1). Valores más bajos indican mayor similitud. 
-                Por defecto es 0.5.
-            top_k (int, optional): Número máximo de resultados a devolver. 
-                Por defecto es 5.
 
         Returns:
-            list: Lista de objetos EmbeddingDataSchema serializados que representan
-                los documentos más similares encontrados en la base de datos.
+            list: Respuesta de la API.
         """
-        db = get_db_session()
-        if not db:
-            raise Exception("Inicializa la base de datos primero.")
+        data: Dict[str, Any] = {
+            "body": {
+                "query": query_str
+            }
+        }
         
         try:
-            # Generar el embedding de la consulta
-            embedding_service = VertexAIEmbeddings(
-                model_name=current_config.EMBEDDING_MODEL_NAME
+            response: requests.Response = requests.post(
+                url=current_config.API_MAXIKASH + "/api/semantic-search",
+                json=data,
+                timeout=30
             )
-            query_embedding: List[float] = embedding_service.embed_query(query_str)
+            response.raise_for_status()
             
-            # Usar la función de distancia correcta
-            distance = EmbeddingData.embedding_embedded_text.cosine_distance(query_embedding)
-            
-            results = db.query(
-                EmbeddingData.embedding_data_text,
-                distance.label('similarity')
-            ).filter(
-                distance < similarity_threshold
-            ).order_by(
-                distance.asc()  # Menor distancia = mayor similitud
-            ).limit(
-                top_k
-            ).all()
-                        
-            return EmbeddingDataSchema(many=True).dump(results)
-        except Exception as e:
-            print(f"Error al realizar la búsqueda semántica: {e}")
-            raise
-        finally:
-            db.close()
+            try:
+                return response.json()
+            except (json.JSONDecodeError, KeyError):
+                return [{"error": "Error procesando la respuesta del servidor"}]
+                
+        except requests.exceptions.RequestException as e:
+            return [{"error": f"Error de conexión: {str(e)}"}]
