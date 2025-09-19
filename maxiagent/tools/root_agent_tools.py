@@ -210,9 +210,7 @@ class RootAgentTools:
     # --- Herramientas para la base de datos ---
     def semantic_search(
         self,
-        query_str: str,
-        similarity_threshold: float = 0.5,
-        top_k: int = 1
+        query_str: str
     ):
         """
         Realiza una búsqueda semántica en la base de datos utilizando embeddings de texto.
