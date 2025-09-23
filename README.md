@@ -1,25 +1,72 @@
-# MaxiAgent - Motorcycle Finance Assistant
+# MaxiAgent - Multi-Agent Motorcycle Finance Engine
 
 ## Overview
 
-MaxiAgent is an AI-powered conversational agent specialized in motorcycle financing for Maxikash. It provides expert consultation on motorcycle credits, generates personalized quotations, and offers up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
+MaxiAgent is an AI-powered **multi-agent system** specialized in motorcycle financing for Maxikash. The system orchestrates multiple specialized agents to provide expert consultation on motorcycle credits, generate personalized quotations, and offer up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
 
 ![RAG Architecture](RAG_architecture.png)
 
-The agent combines Retrieval-Augmented Generation (RAG) technology with Google Cloud's Agent Development Kit to deliver comprehensive financial advisory services. It processes user queries through specialized tools for credit consultation, catalog search, quotation calculation, and session management.
+The multi-agent engine combines Retrieval-Augmented Generation (RAG) technology with Google Cloud's Agent Development Kit to deliver comprehensive financial advisory services through specialized agents that handle different aspects of the customer journey.
 
 ## Agent Details
 | Attribute         | Details                                                                                                                                                                                             |
 | :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Interaction Type** | Conversational                                                                                                                                                                                      |
-| **Complexity**    | Advanced
-| **Agent Type**    | Single Agent with Multiple Tools                                                                                                                                                                                        |
-| **Components**    | Financial Calculator, Web Search, RAG, Session Management                                                                                                                                                                               |
+| **Complexity**    | Advanced Multi-Agent System
+| **Agent Type**    | **Multi-Agent Architecture** with Coordinator and Specialized Sub-Agents                                                                                                                                                                                        |
+| **Components**    | Root Coordinator, Credit Advisor, Catalog Consultant, Quotation Calculator, Session Manager                                                                                                                                                                               |
 | **Vertical**      | Financial Services - Motorcycle Financing                                                                                                               |
 
-### Agent Architecture
+### Multi-Agent Architecture
 
 ![RAG](RAG_workflow.png)
+
+## Multi-Agent System Architecture
+
+MaxiAgent operates as a **multi-agent engine** with a coordination layer that manages specialized sub-agents:
+
+### 🎯 **Root Coordinator Agent**
+- **Primary Role**: Orchestrates and coordinates between specialized agents
+- **Functions**:
+  - Analyzes user queries and determines appropriate agent routing
+  - Maintains conversation flow and context between agents
+  - Provides initial greeting and system overview
+  - Ensures coherent user experience across agent interactions
+
+### 🏦 **Credit Advice Agent**
+- **Specialization**: Credit and financing consultation
+- **Tools**: Semantic search with RAG for credit information
+- **Expertise**:
+  - Financing processes and requirements
+  - Documentation guidance
+  - Payment options and interest rates
+  - Eligibility assessments
+
+### 🏍️ **Catalog Agent**
+- **Specialization**: Motorcycle catalog consultation
+- **Tools**: Real-time web search for motorcycle information
+- **Expertise**:
+  - Italika, Bajaj, and Vento motorcycle catalogs
+  - Current pricing and specifications
+  - Model recommendations by category
+  - Technical specifications
+
+### 📊 **Calculation Agent**
+- **Specialization**: Financial quotation generation
+- **Tools**: External API integration for loan calculations
+- **Expertise**:
+  - Personalized financing calculations
+  - Multiple payment plan options
+  - Real-time quote generation
+
+### 💾 **Session Management Agent**
+- **Specialization**: Data collection and persistence
+- **Tools**: Session state management tools
+- **Expertise**:
+  - Client data collection and validation
+  - Session persistence across conversations
+  - Data completeness verification
+  - Privacy-focused data handling
 
 ## Key Features
 
@@ -200,29 +247,85 @@ Agent: Perfecto, necesito algunos datos para generar su cotización:
 
 ## Development
 
-### Project Structure
+### Multi-Agent Project Structure
 ```
 maxiagent/
-├── agent.py              # Main agent configuration
+├── agent.py              # Root coordinator agent configuration
 ├── config/               # Environment and configuration management
 │   ├── __init__.py
 │   └── config.py
-├── prompts/              # Agent instruction prompts
+├── prompts/              # Root coordinator prompts
 │   ├── __init__.py
 │   └── root_agent_prompts.py
-├── tools/                # Agent tools and capabilities
+├── tools/                # Root coordinator tools (legacy compatibility)
 │   ├── __init__.py
 │   └── root_agent_tools.py
-└── utils/                # Utility functions
+├── sub_agent/            # Multi-agent system architecture
+│   ├── __init__.py
+│   ├── credit_advice_agent/      # Credit and financing specialist
+│   │   ├── __init__.py
+│   │   ├── agent.py
+│   │   ├── prompts/
+│   │   │   ├── __init__.py
+│   │   │   └── credit_advice_prompts.py
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       └── credit_advice_tools.py
+│   ├── catalog_agent/            # Motorcycle catalog specialist
+│   │   ├── __init__.py
+│   │   ├── agent.py
+│   │   ├── prompts/
+│   │   │   ├── __init__.py
+│   │   │   └── catalog_prompts.py
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       └── catalog_tools.py
+│   ├── calculation_agent/        # Financial calculation specialist
+│   │   ├── __init__.py
+│   │   ├── agent.py
+│   │   ├── prompts/
+│   │   │   ├── __init__.py
+│   │   │   └── calculation_prompts.py
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       └── calculation_tools.py
+│   └── session_management_agent/ # Data collection specialist
+│       ├── __init__.py
+│       ├── agent.py
+│       ├── prompts/
+│       │   ├── __init__.py
+│       │   └── session_management_prompts.py
+│       └── tools/
+│           ├── __init__.py
+│           └── session_management_tools.py
+└── utils/                # Shared utility functions
     ├── __init__.py
     └── utils.py
 ```
 
 ### Adding New Tools
 
-1. Add the tool function to `maxiagent/tools/root_agent_tools.py`
-2. Register it in the `_tools` dictionary
-3. Update the prompt instructions in `maxiagent/prompts/root_agent_prompts.py`
+#### For Existing Agents:
+1. Add the tool function to the appropriate agent's tools file (e.g., `maxiagent/sub_agent/credit_advice_agent/tools/credit_advice_tools.py`)
+2. Register it in the agent's `_tools` dictionary
+3. Update the agent's prompt instructions in the corresponding prompts file
+
+#### For New Specialized Agents:
+1. Create a new agent directory under `maxiagent/sub_agent/`
+2. Follow the established structure:
+   ```
+   new_agent/
+   ├── __init__.py
+   ├── agent.py
+   ├── prompts/
+   │   ├── __init__.py
+   │   └── new_agent_prompts.py
+   └── tools/
+       ├── __init__.py
+       └── new_agent_tools.py
+   ```
+3. Import and register the new agent in `maxiagent/sub_agent/__init__.py`
+4. Add the agent to the root coordinator's sub_agents dictionary in `maxiagent/agent.py`
 
 ### Testing
 
@@ -244,14 +347,26 @@ For RAG functionality, configure PostgreSQL with pgvector extension for embeddin
 ## Customization
 
 ### Modify Agent Behavior
-- **Prompts**: Edit `maxiagent/prompts/root_agent_prompts.py` to change agent responses and behavior
-- **Tools**: Add or modify tools in `maxiagent/tools/root_agent_tools.py`
+
+#### Root Coordinator:
+- **Prompts**: Edit `maxiagent/prompts/root_agent_prompts.py` to change coordination behavior
 - **Configuration**: Adjust settings in `maxiagent/config/config.py`
+
+#### Specialized Agents:
+- **Credit Advice**: Modify `maxiagent/sub_agent/credit_advice_agent/prompts/credit_advice_prompts.py`
+- **Catalog Consultation**: Modify `maxiagent/sub_agent/catalog_agent/prompts/catalog_prompts.py`
+- **Financial Calculations**: Modify `maxiagent/sub_agent/calculation_agent/prompts/calculation_prompts.py`
+- **Session Management**: Modify `maxiagent/sub_agent/session_management_agent/prompts/session_management_prompts.py`
+
+#### Tools:
+- **Distributed Tools**: Each agent has its own specialized tools in their respective `tools/` directories
+- **Shared Utilities**: Common functions are available in `maxiagent/utils/utils.py`
 
 ### Integrate Additional APIs
 - Add new API configurations to the config classes
-- Create corresponding tool functions
-- Update agent prompts to include new capabilities
+- Create corresponding tool functions in the appropriate specialized agent
+- Update the specific agent's prompts to include new capabilities
+- Consider creating a new specialized agent if the functionality is substantial enough
 
 ## Supported Motorcycle Brands
 
@@ -261,6 +376,16 @@ For RAG functionality, configure PostgreSQL with pgvector extension for embeddin
 
 For other brands, the agent will redirect users to the supported options.
 
+## Multi-Agent Benefits
+
+The multi-agent architecture provides several advantages:
+
+- **Specialized Expertise**: Each agent focuses on a specific domain, providing more accurate and relevant responses
+- **Scalability**: New agents can be added without affecting existing functionality
+- **Maintainability**: Code is organized by functionality, making it easier to maintain and update
+- **Performance**: Specialized agents can be optimized for their specific tasks
+- **Modularity**: Agents can be developed, tested, and deployed independently
+
 ## Disclaimer
 
-This project is designed for motorcycle financing consultation and quotation generation. All financial calculations are provided through external APIs and should be verified for accuracy. The agent is intended for informational and consultation purposes within the Maxikash ecosystem.
+This project is designed as a multi-agent motorcycle financing consultation and quotation generation system. All financial calculations are provided through external APIs and should be verified for accuracy. The agents are intended for informational and consultation purposes within the Maxikash ecosystem.
