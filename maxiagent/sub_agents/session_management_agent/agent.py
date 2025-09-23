@@ -3,6 +3,7 @@ from .tools import SessionManagementTools
 from ...config import current_config
 
 from google.adk.agents import Agent
+from google.genai import types
 
 prompts = SessionManagementPrompts()
 tools = SessionManagementTools()
@@ -11,5 +12,6 @@ session_management_agent = Agent(
     model=current_config.ROOT_AGENT_MODEL,
     name='session_management_agent',
     instruction=prompts.get_full_prompt(),
-    tools=tools.get_all_tools()
+    tools=tools.get_all_tools(),
+    generate_content_config=types.GenerateContentConfig(temperature=0.04)
 )
