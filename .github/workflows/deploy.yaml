@@ -22,14 +22,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          echo "📦 Instalando dependencias Python..."
-          python -m pip install --upgrade pip
-          pip install google-cloud-aiplatform[adk,agent-engines] google-adk python-dotenv beautifulsoup4
-          echo "✅ Dependencias instaladas"
-
+          
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -39,6 +32,13 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Instalando dependencias Python..."
+          python -m pip install --upgrade pip
+          pip install google-cloud-aiplatform[adk,agent-engines] google-adk python-dotenv beautifulsoup4
+          echo "✅ Dependencias instaladas"
 
       - name: Deploy Agent Engine (Production - Update)
         if: ${{ github.ref == 'refs/heads/master' }}
@@ -54,7 +54,7 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
           KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
-          API_MAXIKASH: ${{ secrets.API_MAXIKASH_PROD }}
+          API_MAXIKASH_PROD: ${{ secrets.API_MAXIKASH_PROD }}
         run: |
           echo "🚀 Iniciando despliegue en producción..."
           echo "🔧 Variables de entorno configuradas"
@@ -75,7 +75,7 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
           KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
-          API_MAXIKASH: ${{ secrets.API_MAXIKASH_DEV }}
+          API_MAXIKASH_DEV: ${{ secrets.API_MAXIKASH_DEV }}
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."
           echo "🔧 Variables de entorno configuradas"
