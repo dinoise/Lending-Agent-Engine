@@ -17,17 +17,21 @@ such as passwords, tokens, and other credentials that need to be securely stored
 
 def get_page_content(url) -> str:
     try:
-        response: requests.Response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Remover elementos no deseados (scripts, estilos, etc.)
-        for element in soup(['script', 'style', 'nav', 'footer', 'header']):
-            element.decompose()
-        
-        # Extraer TODO el texto de la página, incluyendo elementos anidados
-        all_text: str = soup.get_text(' ', strip=True)
-        
-        return all_text[:10000]
+        # Usar session para un mejor manejo de conexiones
+        with requests.Session() as session:
+            response: requests.Response = session.get(url, timeout=10)
+            response.close()  # Cerrar explícitamente la respuesta
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Remover elementos no deseados (scripts, estilos, etc.)
+            for element in soup(['script', 'style', 'nav', 'footer', 'header']):
+                element.decompose()
+
+            # Extraer TODO el texto de la página, incluyendo elementos anidados
+            all_text: str = soup.get_text(' ', strip=True)
+
+            return all_text[:10000]
     except Exception as e:
         print(f"Error: {e}")
         return ""
