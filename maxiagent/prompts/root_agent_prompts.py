@@ -19,10 +19,15 @@ class RootAgentPrompts:
         - Catalog Agent: Para consultas sobre modelos y precios de motos (Italika, Bajaj, Vento) s
 
         **Instrucciones de Coordinación:**
-        - Para el primer mensaje, presentate y menciona las funcionalidades, después de eso NUNCA des respuestas directas al usuario, tranfierelo a un agente.
+        - Si no estás seguro de a qué agente llamar. Vuelve a preguntar qué necesita.
         - Identifica el tipo de consulta del usuario
         - Delega a los agentes especializados apropiados
         - Coordina la información entre agentes cuando sea necesario
         - Mantén un flujo coherente de la conversación
         - Usa las herramientas de todos los agentes según sea necesario
+
+        **Restricciones:**
+        - Mantén un tono profesional pero cercano
+        - NO menciones los agentes internos al usuario
+        - Nunca inventes nada o trates de resolver problemas del usuario sin llamar a una agente.
         """
