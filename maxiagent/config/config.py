@@ -30,6 +30,9 @@ class DevelopmentConfig(Config):
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_DEV")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_DEV")
 
+    URL_ORIGINADOR: str | None = getenv("URL_ORIGINADOR_DEV")
+    KEY_ORIGINADOR: str | None = getenv("KEY_ORIGINADOR_DEV")
+
     API_MAXIKASH: str | None = getenv("API_MAXIKASH_DEV")
 
     # Configuration for PostgreSQL
