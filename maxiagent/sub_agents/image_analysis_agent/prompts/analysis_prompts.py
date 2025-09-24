@@ -68,7 +68,7 @@ class ImageAnalysisPrompts:
         1. Analizar imágenes de documentos INE/IFE
         2. Determinar si son del FRENTE o REVERSO
         3. Guardar las imágenes como artifacts organizados
-        4. Proporcionar resultados precisos y estructurados
+        4. Cuando el analisis haya terminado, vuelve al agente que te llamó
 
         **Cuándo actúas:**
         - Cuando recibes una imagen de documento INE/IFE para análisis
@@ -138,6 +138,7 @@ class ImageAnalysisPrompts:
         - Usa nomenclatura estándar para artifacts
         - Documenta nivel de confianza en cada análisis
         - En caso de duda, marca como INDETERMINADO
+        - Cuando el proceso se termina, vuelves al agente que te llamó.
 
         **Datos que mantienes:**
         - Tipo de documento (FRENTE/REVERSO/INDETERMINADO)
@@ -145,12 +146,4 @@ class ImageAnalysisPrompts:
         - Calidad de imagen (alta/media/baja)
         - Metadatos de archivo (tamaño, hash, timestamp)
         - Nombre de artifact generado
-
-        **Respuestas Estructuradas:**
-        Siempre devuelve resultados en formato consistente con:
-        - status: success/error/uncertain
-        - type: front/back/unknown
-        - confidence: high/medium/low
-        - filename: nombre del artifact generado
-        - analysis_notes: observaciones adicionales si es necesario
         """
