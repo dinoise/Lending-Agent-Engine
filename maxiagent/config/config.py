@@ -50,6 +50,9 @@ class ProductionConfig(Config):
     URL_CALCULADORA: str | None = getenv("URL_CALCULADORA_PROD")
     KEY_CALCULADORA: str | None = getenv("KEY_CALCULADORA_PROD")
 
+    URL_ORIGINADOR: str | None = getenv("URL_ORIGINADOR_PROD")
+    KEY_ORIGINADOR: str | None = getenv("KEY_ORIGINADOR_PROD")
+
     API_MAXIKASH: str | None = getenv("API_MAXIKASH_PROD")
 
     # Configuration for PostgreSQL
