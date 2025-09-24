@@ -1,5 +1,6 @@
 from os import getenv
 from dotenv import load_dotenv
+from typing import Type, Union
 
 load_dotenv()
 
@@ -7,6 +8,7 @@ class Config:
     """Configuraciones comunes"""
     FLASK_ENV: str = getenv("FLASK_ENV", "dev")
     PROJECT_ID: str | None = getenv("GOOGLE_CLOUD_PROJECT")
+    LOCATION: str | None = getenv("GOOGLE_CLOUD_LOCATION")
 
     AGENT_ENGINE_ID: str | None = getenv("AGENT_ENGINE_ID")
 
@@ -57,8 +59,14 @@ class ProductionConfig(Config):
     PG_PASSWORD = "POSTGRE_PASS_RAG_REPO_DEV"
     PG_NAME = "POSTGRE_DB_RAG_REPO"
 
-# Dictionary to select the environment
-config_by_name = {
+ConfigType = Union[Type[DevelopmentConfig], Type[ProductionConfig]]
+
+# Dictionary con tipo explícito
+config_by_name: dict[str, ConfigType] = {
     'dev': DevelopmentConfig,
     'prod': ProductionConfig
 }
+
+# Uso con tipo definido
+config_name: str | None = getenv("ENV")
+current_config: ConfigType = config_by_name[config_name if config_name is not None else 'dev']
