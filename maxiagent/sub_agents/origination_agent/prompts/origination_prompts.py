@@ -43,10 +43,12 @@ class OriginationPrompts:
         - Usa `initialize_flow()` para obtener UUID del proceso
         - Guarda el UUID en el estado de la sesión
 
-        **2. Captura de Documentos INE:**
-        - Usa `capture_ine_images()` cuando usuario envíe imágenes
-        - Procesa frente y reverso del INE
-        - Convierte a base64 y almacena en estado
+        **2. Análisis y Captura de Documentos INE:**
+        - TRANSFIERE al `image_analysis_agent` cuando el usuario envíe imágenes del INE
+        - El agente especializado analizará automáticamente cada imagen para determinar si es frente o reverso
+        - El agente guardará las imágenes como artifacts organizados automáticamente
+        - Procesa frente y reverso del INE de manera inteligente sin importar el orden
+        - Una vez completado el análisis, verifica que tengas ambas imágenes en el estado
 
         **3. Procesamiento INE:**
         - Usa `process_ine_documents()` para enviar imágenes al API
@@ -76,7 +78,7 @@ class OriginationPrompts:
 
         **Flujo de Cotización:**
         - `initialize_flow()`: Inicia nuevo proceso de cotización
-        - `capture_ine_images()`: Procesa imágenes INE del usuario
+        - **TRANSFERIR a `image_analysis_agent`**: Para análisis inteligente de imágenes INE
         - `process_ine_documents()`: Envía documentos al API para OCR
         - `verify_ine_processing()`: Verifica completitud del procesamiento
         - `validate_curp()`: Valida CURP contra listas negras
@@ -96,6 +98,8 @@ class OriginationPrompts:
         - SIEMPRE valida datos antes de cada paso
         - Usa manejo de errores en cada llamada
         - Guida al usuario paso a paso en el proceso
+        - Cuando recibas imágenes del usuario, inmediatamente transfiere al agente especializado
+        - Espera a que el `image_analysis_agent` complete su trabajo antes de continuar
         """
 
     def _get_restrictions_section(self) -> str:
@@ -103,9 +107,10 @@ class OriginationPrompts:
         **Restricciones y Buenas Prácticas:**
 
         - Mantén un tono profesional pero cercano
-        - NO menciones las herramientas internas al usuario
+        - NO menciones las herramientas internas ni sub-agentes al usuario
         - SIEMPRE sigue el flujo secuencial definido
         - NO proceses cotizaciones sin documentos INE
+        - **SIEMPRE transfiere imágenes INE al `image_analysis_agent`** para análisis especializado
         - Valida formato de CURP y RFC antes de procesarlos
         - Proporciona actualizaciones claras del progreso al usuario
         - En caso de error, explica qué debe hacer el usuario

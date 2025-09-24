@@ -1,21 +1,23 @@
 import hashlib
 import time
 import base64
-from typing import List, Callable, Dict, Optional
+from typing import List, Callable, Dict
 
 from google import genai
+from google.genai import types
 
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import Content, Part, Blob
 from ..prompts.analysis_prompts import ImageAnalysisPrompts
+from ....config import current_config
 
-from google.genai.types import HarmCategory, HarmBlockThreshold
+# Safety settings se configuran usando enums del nuevo Google Gen AI SDK
 
 class ImageAnalysisTools:
     """Clase para gestionar las herramientas del agente de análisis de imágenes."""
 
     def __init__(self):
         self._prompts = ImageAnalysisPrompts()
+        self._client = None  # Cliente Gen AI (se inicializa cuando se necesite)
         self._tools = {
             'analysis_tools': {
                 'analyze_ine_document': self.analyze_ine_document,
@@ -91,25 +93,15 @@ class ImageAnalysisTools:
                 # Crear prompt específico para análisis
                 analysis_prompt = self._prompts.get_ine_analysis_prompt()
 
-                # Crear contenido para análisis
-                analysis_content = Content(parts=[
-                    Part(text=analysis_prompt),
-                    Part(inline_data=Blob(
-                        mime_type=image_part.inline_data.mime_type,
-                        data=image_data
-                    ))
-                ])
-
-                # El análisis real se haría aquí con el modelo
-                # Por ahora simulamos la respuesta basada en heurísticas básicas
-                analysis_result = await self._simulate_image_analysis(image_data, analysis_content)
+                # Realizar análisis usando el modelo configurado (el nuevo SDK maneja el contenido internamente)
+                analysis_result = await self._analyze_image_with_model(
+                    image_data,
+                    mime_type=image_part.inline_data.mime_type
+                )
 
                 if analysis_result["status"] != "success":
                     print(f"❌ Error analizando imagen {idx + 1}: {analysis_result.get('message')}")
-                    return {
-                        "status": "error",
-                        "message": "No se pudieron analizar las imágenes enviadas."
-                    }
+                    continue
                 
                 detected_type = analysis_result["type"]
                 confidence = analysis_result.get("confidence", "medium")
@@ -340,43 +332,157 @@ class ImageAnalysisTools:
 
     # Métodos auxiliares privados
 
-    async def _simulate_image_analysis(self, image_data: bytes, analysis_content: Content) -> dict:
+    def _get_genai_client(self) -> genai.Client:
         """
-        Simula el análisis de imagen (en implementación real usaría un modelo).
+        Obtiene o crea el cliente Gen AI configurado para Vertex AI.
+
+        Returns:
+            Cliente Gen AI configurado
+        """
+        if self._client is None:
+            try:
+                # Configurar cliente para usar Vertex AI
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=current_config.PROJECT_ID,
+                    location=current_config.LOCATION
+                )
+                print(f"🔧 Cliente Gen AI inicializado para proyecto {current_config.PROJECT_ID}")
+            except Exception as e:
+                print(f"❌ Error inicializando cliente Gen AI: {e}")
+                # Fallback: intentar con variables de entorno
+                try:
+                    self._client = genai.Client(vertexai=True)
+                    print("🔧 Cliente Gen AI inicializado con variables de entorno")
+                except Exception as fallback_error:
+                    print(f"❌ Error en fallback: {fallback_error}")
+                    raise e
+
+        return self._client
+
+    async def _analyze_image_with_model(self, image_data: bytes, mime_type: str = 'image/jpeg') -> dict:
+        """
+        Realiza el análisis real de imagen usando el nuevo Google Gen AI SDK.
 
         Args:
             image_data: Datos de la imagen
-            analysis_content: Contenido para análisis
+            mime_type: Tipo MIME de la imagen
 
         Returns:
-            Dict con resultado simulado del análisis
+            Dict con resultado del análisis
         """
-        # Por ahora retornamos una clasificación simulada
-        # En implementación real, aquí se haría la llamada al modelo
+        try:
+            # Obtener cliente Gen AI
+            client = self._get_genai_client()
 
-        image_size = len(image_data)
+            # Obtener prompt de análisis
+            analysis_prompt = self._prompts.get_ine_analysis_prompt()
 
-        # Heurística simple basada en tamaño (solo para demostración)
-        if image_size > 500000:  # Imágenes grandes tienden a ser frontales (con foto)
+            # Preparar contenido usando el nuevo SDK
+            contents = [
+                analysis_prompt,
+                types.Part.from_bytes(
+                    data=image_data,
+                    mime_type=mime_type
+                )
+            ]
+
+            # Safety settings para documentos oficiales
+            safety_settings = [
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE
+                ),
+            ]
+
+            print(f"🤖 Enviando imagen al modelo {current_config.ROOT_AGENT_MODEL} para análisis...")
+
+            # Usar la interfaz asíncrona del nuevo SDK
+            response = await client.aio.models.generate_content(
+                model=current_config.ROOT_AGENT_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    safety_settings=safety_settings,
+                    temperature=0.0  # Para consistencia en clasificación
+                )
+            )
+
+            if not response or not response.text:
+                return {
+                    "status": "error",
+                    "type": "unknown",
+                    "message": "El modelo no proporcionó respuesta"
+                }
+
+            analysis_result = response.text.strip().upper()
+            print(f"📝 Respuesta del modelo: {analysis_result}")
+
+            # Mapear respuesta a formato esperado
+            if "FRENTE" in analysis_result:
+                return {
+                    "status": "success",
+                    "type": "front",
+                    "confidence": "high",
+                    "analysis": analysis_result
+                }
+            elif "REVERSO" in analysis_result:
+                return {
+                    "status": "success",
+                    "type": "back",
+                    "confidence": "high",
+                    "analysis": analysis_result
+                }
+            elif "INDETERMINADO" in analysis_result:
+                return {
+                    "status": "uncertain",
+                    "type": "unknown",
+                    "confidence": "low",
+                    "analysis": analysis_result
+                }
+            else:
+                # Si la respuesta no contiene las palabras clave esperadas,
+                # intentar inferir del contenido
+                lower_result = analysis_result.lower()
+                if any(word in lower_result for word in ["foto", "fotografía", "persona", "nombre", "curp", "domicilio"]):
+                    return {
+                        "status": "success",
+                        "type": "front",
+                        "confidence": "medium",
+                        "analysis": f"Inferido como frente: {analysis_result}"
+                    }
+                elif any(word in lower_result for word in ["código", "barra", "vigencia", "oficial", "autoridad", "qr"]):
+                    return {
+                        "status": "success",
+                        "type": "back",
+                        "confidence": "medium",
+                        "analysis": f"Inferido como reverso: {analysis_result}"
+                    }
+                else:
+                    return {
+                        "status": "uncertain",
+                        "type": "unknown",
+                        "confidence": "low",
+                        "analysis": f"Respuesta no clasificable: {analysis_result}"
+                    }
+
+        except Exception as e:
+            print(f"❌ Error en análisis con modelo Gen AI: {e}")
             return {
-                "status": "success",
-                "type": "front",
-                "confidence": "medium",
-                "analysis": "Imagen grande, posiblemente frontal"
-            }
-        elif image_size > 200000:
-            return {
-                "status": "success",
-                "type": "back",
-                "confidence": "medium",
-                "analysis": "Imagen mediana, posiblemente reverso"
-            }
-        else:
-            return {
-                "status": "uncertain",
+                "status": "error",
                 "type": "unknown",
-                "confidence": "low",
-                "analysis": "Imagen pequeña, difícil de clasificar"
+                "message": f"Error en análisis: {e}"
             }
 
     async def _save_image_artifact(
@@ -401,7 +507,9 @@ class ImageAnalysisTools:
             Dict con resultado del guardado
         """
         try:
-            # Crear artifact con los datos de imagen
+            # Crear artifact con los datos de imagen usando tipos del ADK
+            from google.genai.types import Content, Part, Blob
+
             image_artifact = Part(
                 inline_data=Blob(
                     mime_type=mime_type,

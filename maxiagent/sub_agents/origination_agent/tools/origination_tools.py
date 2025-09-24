@@ -21,7 +21,6 @@ class OriginationTools:
             'image_tools': {
                 'save_image_artifact': self.save_image_artifact,
                 'get_image_data': self.get_image_data,
-                'capture_ine_images': self.capture_ine_images
             },
             'quotation_flow': {
                 'initialize_flow': self.initialize_flow,
