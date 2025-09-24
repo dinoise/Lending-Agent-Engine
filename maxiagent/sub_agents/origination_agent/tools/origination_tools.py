@@ -10,7 +10,7 @@ from typing import List, Callable, Dict, Optional
 from datetime import datetime
 
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import Part, Blob
+from google.genai.types import Content, Part, Blob
 from ....config import current_config
 
 class OriginationTools:
@@ -251,11 +251,12 @@ class OriginationTools:
 
     # === New Quotation Flow Methods ===
 
-    async def capture_ine_images(self, tool_context: ToolContext, front_filename: str = "INE_frontal", back_filename: str = "INE_reverso") -> dict:
+    async def capture_ine_images(self, tool_context: ToolContext, is_front_face: bool, front_filename: str = "INE_frontal", back_filename: str = "INE_reverso") -> dict:
         """
-        Método auxiliar para capturar y procesar ambas imágenes del INE.
+        Método auxiliar para capturar y procesar una imagen del INE.
 
         Args:
+            is_front_face: Booleano que determina si la imagen es del reverso o del anverso de la INE.
             front_filename: Nombre para guardar la imagen frontal
             back_filename: Nombre para guardar la imagen del reverso
 
@@ -264,22 +265,40 @@ class OriginationTools:
         """
         try:
             # Obtener contenido del usuario actual
-            user_content = tool_context.user_content
+            user_content: Content | None = tool_context.user_content
+
+            user_parts: List[Part] | None = user_content.parts
+
+            if not user_parts:
+                return {
+                    "status": "error",
+                    "message": "There are no Parts in the user message"
+                }
 
             print(f"user_content type: {type(user_content)}")
-            print(f"user_content parts count: {len(user_content.parts) if hasattr(user_content, 'parts') else 'no parts'}")
+            print(f"user_content parts count: {len(user_parts) if hasattr(user_content, 'parts') else 'no parts'}")
 
-            # Buscar imágenes en el contenido del usuario
             image_parts = []
-            if hasattr(user_content, 'parts') and user_content.parts:
-                for i, part in enumerate(user_content.parts):
-                    print(f"Part {i}: {type(part)}")
-                    if hasattr(part, 'inline_data') and part.inline_data:
-                        print(f"  MIME type: {part.inline_data.mime_type}")
-                        print(f"  Data size: {len(part.inline_data.data) if part.inline_data.data else 0} bytes")
-                        if part.inline_data.mime_type and part.inline_data.mime_type.startswith('image/'):
-                            image_parts.append(part)
-                            print(f"  → Imagen {len(image_parts)} agregada")
+            if not (hasattr(user_content, 'parts') and user_parts):
+                return {
+                    "status": "error",
+                    "message": "Atritube 'parts' missing in user message content"
+                }
+            
+            # Buscar imágenes en el contenido del usuario
+            for i, part in enumerate(user_parts):
+                print(f"--- Part {i} ---")
+                inline_data: Blob | None = part.inline_data
+                
+                if not (hasattr(part, 'inline_data') and inline_data): 
+                    continue
+                print(f"MIME type: {inline_data.mime_type}")
+                print(f"Data size: {len(inline_data.data) if inline_data.data else 0} bytes")
+
+                if not (inline_data.mime_type and inline_data.mime_type.startswith('image/')): 
+                    continue
+                image_parts.append(part)
+                print(f"→ Imagen {len(image_parts)} agregada")
 
             print(f"Total imágenes encontradas: {len(image_parts)}")
 
