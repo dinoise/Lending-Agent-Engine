@@ -27,14 +27,8 @@ google-cloud-secret-manager = "^2.23.0"
 langchain-google-vertexai = "^2.0.28"
 llama-index = "^0.12"
 
-# ─── Bases de datos ───────────────────────────────────────────
-SQLAlchemy = "^2.0.43"
-psycopg2-binary = "^2.9.10"
-pgvector = "^0.4.1"
-
 # ─── HTTP y Requests ──────────────────────────────────────────
 requests = "^2.32.3"
-
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"

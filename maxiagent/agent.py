@@ -4,7 +4,6 @@ from .config import current_config
 
 # Import sub-agents
 from .sub_agents import (credit_advice_agent,
-                        calculation_agent,
                         catalog_agent,
                         origination_agent)
 
