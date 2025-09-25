@@ -82,12 +82,7 @@ class OriginationTools:
         try:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/nuevo-flujo"
 
-            headers = {
-                'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                'X-API-KEY': current_config.KEY_ORIGINADOR,
-            }
-
-            response = requests.get(api_url, headers=headers, timeout=30)
+            response = await self._call_originador_api(api_url, method='GET')
             response.raise_for_status()
 
             data = response.json()
@@ -101,8 +96,7 @@ class OriginationTools:
 
             return {
                 "status": "success",
-                "flow_uuid": flow_uuid,
-                "message": f"Flujo inicializado exitosamente con UUID: {flow_uuid}"
+                "message": f"Flujo inicializado exitosamente."
             }
 
         except Exception as e:
@@ -140,25 +134,19 @@ class OriginationTools:
 
             api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
-            
-            headers = {
-                'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                'X-API-KEY': current_config.KEY_ORIGINADOR,
-            }
 
             payload = {
                 "frenteBase64": ine_front,
                 "reversoBase64": ine_back
             }
 
-            response = requests.post(
+            await self._call_originador_api(
                 api_url,
+                method='POST',
                 params=params,
-                json=payload,
-                headers=headers,
+                json_data=payload,
                 timeout=60
             )
-            response.raise_for_status()
 
             return {
                 "status": "success",
@@ -191,15 +179,15 @@ class OriginationTools:
             
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/estatus-ine"
             params = {"uuidFlujo": flow_uuid}
-            headers = {
-                'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                'X-API-KEY': current_config.KEY_ORIGINADOR,
-            }
-            
+
             for attempt in range(max_retries):
                 try:
-                    response = requests.get(api_url, params=params, headers=headers, timeout=30)
-                    response.raise_for_status()
+                    response = await self._call_originador_api(
+                        api_url,
+                        method='GET',
+                        params=params,
+                        timeout=30
+                    )
                     
                     # Validar que sea JSON válido
                     try:
@@ -298,13 +286,11 @@ class OriginationTools:
                 "can_proceed": False
             }
             
-            # Inicializar checks como error
-            for config in self.VALIDATION_ENDPOINTS.values():
-                results[config['check_key']] = "error"
-
             # Procesar todas las respuestas usando la configuración
             response_data = {}
             for response, (endpoint_name, config) in zip(responses, self.VALIDATION_ENDPOINTS.items()):
+                results[config['check_key']] = "error"
+
                 data = self._process_api_response(response, results, config)
                 response_data[endpoint_name] = data
 
@@ -387,22 +373,15 @@ class OriginationTools:
                 }
 
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
-
-            headers = {
-                    'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                    'X-API-KEY': current_config.KEY_ORIGINADOR,
-                }
-            
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            response = requests.post(
+            response = await self._call_originador_api(
                 api_url,
+                method='POST',
                 params=params,
-                json=form_data,
-                headers=headers,
+                json_data=form_data,
                 timeout=30
             )
-            response.raise_for_status()
 
             # Guardar datos del formulario en estado
             tool_context.state['form_data'] = form_data
@@ -466,22 +445,16 @@ class OriginationTools:
             }
 
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/consultar-ofertas"
-            
-            headers = {
-                'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                'X-API-KEY': current_config.KEY_ORIGINADOR,
-            }
 
-            response = requests.post(
+            response = await self._call_originador_api(
                 api_url,
-                json=offer_query,
-                headers=headers,
+                method='POST',
+                json_data=offer_query,
                 timeout=45
             )
             offers_data = response.json()
 
             print(f"offers_data {offers_data}")
-            response.raise_for_status()
 
             # Guardar ofertas en estado
             tool_context.state['offers'] = offers_data
@@ -567,17 +540,42 @@ class OriginationTools:
 
     # === Internal aux methods ===
 
-    # Ejecutar varias validaciones en paralelo usando asyncio
-    async def _call_originador_api(self, url: str, params: dict) -> requests.Response:
+    # Función centralizada para llamadas a la API de originación
+    async def _call_originador_api(
+        self,
+        url: str,
+        method: str = 'POST',
+        params: dict = None,
+        json_data: dict = None,
+        timeout: int = 30
+    ) -> requests.Response:
+        """
+        Función centralizada para llamadas HTTP a la API de originación.
+
+        Args:
+            url: URL completa de la API
+            method: Método HTTP ('GET' o 'POST')
+            params: Parámetros URL para GET o POST
+            json_data: Datos JSON para POST
+            timeout: Timeout en segundos
+
+        Returns:
+            requests.Response: Respuesta HTTP
+        """
         headers = {
             'User-Agent': 'Python-HTTP-Post-Client/1.0',
             'X-API-KEY': current_config.KEY_ORIGINADOR,
         }
+
         loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: requests.post(url, params=params, headers=headers, timeout=30)
-        )
+
+        def make_request() -> requests.Response:
+            if method.upper() == 'GET':
+                return requests.get(url, params=params, headers=headers, timeout=timeout)
+            else:  # POST
+                return requests.post(url, params=params, json=json_data, headers=headers, timeout=timeout)
+
+        return await loop.run_in_executor(None, make_request)
 
     def _validate_curp_format(self, curp: str) -> dict:
         """
@@ -643,7 +641,7 @@ class OriginationTools:
         tasks = []
         for endpoint_config in self.VALIDATION_ENDPOINTS.values():
             url = f"{api_base}{endpoint_config['url_path']}"
-            task = self._call_originador_api(url, params)
+            task = self._call_originador_api(url, method='POST', params=params)
             tasks.append(task)
         
         return await asyncio.gather(*tasks, return_exceptions=True)
