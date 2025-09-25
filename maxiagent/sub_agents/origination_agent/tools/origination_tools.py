@@ -1,10 +1,8 @@
 import re
-import uuid
 import asyncio
 import requests
 
-from typing import List, Callable, Dict
-from datetime import datetime
+from typing import List, Callable, Dict, Any, Literal
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
@@ -86,7 +84,6 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/nuevo-flujo"
 
             response = await self._call_originador_api(api_url, method='GET')
-            response.raise_for_status()
 
             data = response.json()
             flow_uuid = data.get('uuidFlujo')
@@ -102,8 +99,15 @@ class OriginationTools:
                 "message": f"Flujo inicializado exitosamente."
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "inicializar flujo")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error inicializando flujo: {e}"
+            error_msg = f"Error inesperado inicializando flujo: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -156,8 +160,15 @@ class OriginationTools:
                 "message": "Documentos INE enviados para procesamiento"
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "procesar documentos INE")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error procesando documentos INE: {e}"
+            error_msg = f"Error inesperado procesando documentos INE: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -378,14 +389,14 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            response = await self._call_originador_api(
+            response: requests.Response = await self._call_originador_api(
                 api_url,
                 method='POST',
                 params=params,
                 json_data=form_data,
                 timeout=30
             )
-            response.raise_for_status()
+            print(f"FORM RES {response.json()}")
 
             # Guardar datos del formulario en estado
             tool_context.state['form_data'] = form_data
@@ -396,8 +407,15 @@ class OriginationTools:
                 "form_data": form_data
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "enviar formulario")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error enviando formulario: {e}"
+            error_msg = f"Error inesperado enviando formulario: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -445,8 +463,15 @@ class OriginationTools:
                 "message": "NIP enviado exitosamente. El usuario debe revisar su teléfono celular."
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "enviar NIP")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error enviando NIP: {e}"
+            error_msg = f"Error inesperado enviando NIP: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -498,7 +523,6 @@ class OriginationTools:
                 params=params,
                 timeout=30
             )
-            response.raise_for_status()
 
             # Guardar estado de NIP confirmado
             tool_context.state['nip_confirmed'] = True
@@ -508,8 +532,15 @@ class OriginationTools:
                 "message": "NIP confirmado exitosamente. Puedes proceder a consultar ofertas."
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "confirmar NIP")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error confirmando NIP: {e}"
+            error_msg = f"Error inesperado confirmando NIP: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -548,15 +579,21 @@ class OriginationTools:
                 params=params,
                 timeout=30
             )
-            response.raise_for_status()
 
             return {
                 "status": "success",
                 "message": "NIP reenviado exitosamente. El usuario debe revisar su teléfono celular."
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "reenviar NIP")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error reenviando NIP: {e}"
+            error_msg = f"Error inesperado reenviando NIP: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -618,8 +655,15 @@ class OriginationTools:
                 "offer_count": len(offers_data)
             }
 
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "consultar ofertas")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
         except Exception as e:
-            error_msg = f"Error consultando ofertas: {e}"
+            error_msg = f"Error inesperado consultando ofertas: {e}"
             print(error_msg)
             return {
                 "status": "error",
@@ -723,9 +767,13 @@ class OriginationTools:
 
         def make_request() -> requests.Response:
             if method.upper() == 'GET':
-                return requests.get(url, params=params, headers=headers, timeout=timeout)
+                response = requests.get(url, params=params, headers=headers, timeout=timeout)
             else:  # POST
-                return requests.post(url, params=params, json=json_data, headers=headers, timeout=timeout)
+                response = requests.post(url, params=params, json=json_data, headers=headers, timeout=timeout)
+
+            # Lanzar excepción para códigos HTTP de error
+            response.raise_for_status()
+            return response
 
         return await loop.run_in_executor(None, make_request)
 
@@ -797,3 +845,108 @@ class OriginationTools:
             tasks.append(task)
         
         return await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _handle_request_exception(self, exception: requests.RequestException, operation: str) -> str:
+        """
+        Maneja excepciones de requests de manera granular y retorna mensajes específicos.
+
+        Args:
+            exception: La excepción de requests
+            operation: Descripción de la operación que falló
+
+        Returns:
+            str: Mensaje de error específico para el usuario
+        """
+        if isinstance(exception, requests.exceptions.Timeout):
+            return f"Timeout al {operation}. El servidor tardó demasiado en responder. Intenta nuevamente."
+
+        elif isinstance(exception, requests.exceptions.ConnectionError):
+            return f"Error de conexión al {operation}. Verifica tu conexión a internet."
+
+        elif isinstance(exception, requests.exceptions.HTTPError):
+            if exception.response is None:
+                return f"Error HTTP al {operation}. No se pudo obtener el código de estado."
+
+            status_code = exception.response.status_code
+
+            # Intentar extraer mensaje de la API
+            api_message = self._extract_api_error_message(exception.response)
+            message_suffix = f" Mensaje de la API: {api_message}" if api_message else ""
+
+            print(f"status_code {status_code}. API message: {api_message}")
+
+            if status_code == 400:
+                return f"Solicitud inválida al {operation}. Revisa los datos enviados.{message_suffix}"
+            elif status_code == 401:
+                return f"Error de autenticación al {operation}. Token o credenciales inválidas.{message_suffix}"
+            elif status_code == 403:
+                return f"Acceso denegado al {operation}. Permisos insuficientes.{message_suffix}"
+            elif status_code == 404:
+                return f"Servicio no encontrado al {operation}. El endpoint no existe.{message_suffix}"
+            elif status_code == 409:
+                return f"Conflicto al {operation}. Los datos ya existen o están en conflicto.{message_suffix}"
+            elif status_code == 422:
+                return f"Datos inválidos al {operation}. Revisa el formato de los datos.{message_suffix}"
+            elif 500 <= status_code < 600:
+                return f"Error interno del servidor al {operation}. Intenta nuevamente en unos minutos.{message_suffix}"
+            else:
+                return f"Error HTTP {status_code} al {operation}.{message_suffix}"
+
+        elif isinstance(exception, requests.exceptions.RequestException):
+            return f"Error en la solicitud al {operation}: {str(exception)}"
+
+        else:
+            return f"Error inesperado al {operation}: {str(exception)}"
+
+    def _extract_api_error_message(self, response: requests.Response) -> str | None:
+        """
+        Extrae el mensaje de error específico de la respuesta de la API.
+
+        Args:
+            response: La respuesta HTTP de la API
+
+        Returns:
+            str | None: El mensaje de error de la API o None si no se puede extraer
+        """
+        try:
+            # Intentar obtener JSON de la respuesta
+            data = response.json()
+
+            # Intentar diferentes campos comunes para mensajes de error
+            possible_fields = [
+                'message',    # Campo más común
+                'error',      # Otro campo común
+                'mensaje',    # En español
+                'detail',     # Para APIs REST
+                'description',# Descripción del error
+                'msg'         # Abreviado
+            ]
+
+            for field in possible_fields:
+                if field in data and data[field]:
+                    return str(data[field])
+
+            # Si no encuentra campos específicos, intentar buscar en objetos anidados
+            if 'error' in data and isinstance(data['error'], dict):
+                for field in possible_fields:
+                    if field in data['error'] and data['error'][field]:
+                        return str(data['error'][field])
+
+            # Como último recurso, si hay contenido JSON pero sin campos conocidos
+            # devolver una representación resumida
+            if data:
+                return f"Error de API: {str(data)[:100]}..."
+
+            return None
+
+        except (ValueError, TypeError, AttributeError):
+            # Si no es JSON válido, intentar obtener texto plano
+            try:
+                text_content = response.text.strip()
+                if text_content and len(text_content) < 200:
+                    return text_content
+                elif text_content:
+                    return f"{text_content[:100]}..."
+                return None
+            except:
+                return None
