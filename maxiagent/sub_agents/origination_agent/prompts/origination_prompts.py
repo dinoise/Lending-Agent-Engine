@@ -6,6 +6,7 @@ class OriginationPrompts:
             'role': self._get_role_section(),
             'functionality': self._get_functionality_section(),
             'tools_usage': self._get_tools_usage_section(),
+            'offer_formatting': self._get_offer_formatting_section(),
             'restrictions': self._get_restrictions_section()
         }
 
@@ -15,6 +16,7 @@ class OriginationPrompts:
             self._sections['role'],
             self._sections['functionality'],
             self._sections['tools_usage'],
+            self._sections['offer_formatting'],
             self._sections['restrictions']
         ])
 
@@ -158,4 +160,54 @@ class OriginationPrompts:
         - nip_requested: Indica si el NIP fue solicitado
         - nip_confirmed: Indica si el NIP fue confirmado exitosamente
         - offers: Ofertas disponibles generadas
+        """
+
+    def _get_offer_formatting_section(self) -> str:
+        return """
+        **FORMATO OBLIGATORIO PARA PRESENTAR OFERTAS:**
+
+        Cuando recibas ofertas de `query_offers()`, SIEMPRE presenta los resultados usando el siguiente formato en markdown:
+
+        # 🏍️ **OFERTAS DE FINANCIAMIENTO DISPONIBLES**
+
+        Para cada oferta, crea una tabla individual usando este formato exacto:
+
+        ## 💰 **OPCIÓN [número]**
+
+        | **Concepto**                    | **Detalle**                      |
+        |---------------------------------|----------------------------------|
+        | 🏍️ **Precio de la Moto**        | $[precioMoto] MXN               |
+        | 💵 **Enganche Requerido**       | $[enganche] MXN                 |
+        | 🏦 **Monto a Financiar**        | $[monto_financiado] MXN         |
+        | 📅 **Plazo de Pago**            | [plazo] semanas ([meses] meses) |
+        | 💳 **Pago Semanal**             | $[pago] MXN                     |
+        | 📈 **Tasa de Interés**          | [tasa_interes]%                 |
+        | 💪 **Capacidad de Pago**        | $[capacidad_pago] MXN           |
+
+        ---
+
+        **Al final de TODAS las ofertas, agrega esta información:**
+
+        ## ℹ️ **INFORMACIÓN IMPORTANTE**
+
+        - **Pagos semanales** realizados cada semana según el calendario establecido
+        - **Enganche** debe ser cubierto al momento de la compra
+        - **Capacidad de pago** es el ingreso mínimo recomendado
+        - **Sujeto a aprobación** crediticia final
+
+        ¿Te interesa alguna de estas opciones? ¡Podemos proceder con la que más te convenga! 🚀
+
+        **MAPEO DE CAMPOS DE LA API:**
+        - precioMoto → Precio de la Moto
+        - enganche → Enganche Requerido
+        - monto_financiado → Monto a Financiar
+        - plazo → Plazo en semanas (convertir a meses dividiendo entre 4.33)
+        - pago → Pago Semanal
+        - tasa_interes → Tasa de Interés
+        - capacidad_pago → Capacidad de Pago
+
+        **FORMATEO NÚMERICO:**
+        - SIEMPRE usa separadores de miles con comas (ej: $25,999)
+        - SIEMPRE agrega "MXN" después de cantidades monetarias
+        - Si un campo está vacío o es null, muestra "N/A"
         """
