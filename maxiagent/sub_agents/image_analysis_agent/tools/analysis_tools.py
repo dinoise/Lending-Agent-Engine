@@ -274,45 +274,6 @@ class ImageAnalysisTools:
                 "message": f"Error validando calidad de imágenes: {e}"
             }
 
-    async def organize_image_artifacts(self, tool_context: ToolContext) -> dict:
-        """
-        Organiza y lista los artifacts de imágenes guardados.
-
-        Returns:
-            Dict con organización de artifacts
-        """
-        try:
-            state = tool_context.state
-
-            organized = {
-                "frontal": [],
-                "reverso": [],
-                "indeterminado": []
-            }
-
-            # Buscar imágenes en el estado
-            for key, value in state.items():
-                if key.startswith('ine_') and key.endswith('_image'):
-                    if 'front' in key:
-                        organized["frontal"].append(key)
-                    elif 'back' in key:
-                        organized["reverso"].append(key)
-                    else:
-                        organized["indeterminado"].append(key)
-
-            return {
-                "status": "success",
-                "message": "Artifacts organizados exitosamente",
-                "organization": organized,
-                "total_images": sum(len(imgs) for imgs in organized.values())
-            }
-
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Error organizando artifacts: {e}"
-            }
-
     # Métodos auxiliares privados
 
     def _get_genai_client(self) -> genai.Client:
@@ -368,7 +329,7 @@ class ImageAnalysisTools:
             analysis_prompt: str = self._prompts.get_ine_analysis_prompt()
 
             # Armando input para la llamada a la LLM
-            contents: List[types.Part] = [
+            contents: types.ContentListUnion = [
                 types.Part.from_text(text=analysis_prompt),
                 types.Part.from_bytes(
                     data=image_data,
@@ -479,11 +440,8 @@ class ImageAnalysisTools:
             Dict con resultado del guardado
         """
         try:
-            # Crear artifact con los datos de imagen usando tipos del ADK
-            from google.genai.types import Content, Part, Blob
-
-            image_artifact = Part(
-                inline_data=Blob(
+            image_artifact = types.Part(
+                inline_data=types.Blob(
                     mime_type=mime_type,
                     data=image_data
                 )
