@@ -115,7 +115,6 @@ class ImageAnalysisPrompts:
         - `validate_image_quality()`: Verifica calidad y legibilidad de imagen
 
         **Gestión de Artifacts:**
-        - `organize_image_artifacts()`: Organiza imágenes guardadas por tipo
         - `get_image_metadata()`: Obtiene información de imágenes procesadas
 
         **IMPORTANTE:**

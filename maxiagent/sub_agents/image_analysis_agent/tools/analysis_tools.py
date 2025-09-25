@@ -23,10 +23,6 @@ class ImageAnalysisTools:
                 'analyze_ine_document': self.analyze_ine_document,
                 'save_classified_image': self.save_classified_image,
                 'validate_image_quality': self.validate_image_quality
-            },
-            'artifact_management': {
-                'organize_image_artifacts': self.organize_image_artifacts,
-                'get_image_metadata': self.get_image_metadata
             }
         }
 
@@ -297,39 +293,6 @@ class ImageAnalysisTools:
                 "message": f"Error organizando artifacts: {e}"
             }
 
-    async def get_image_metadata(self, tool_context: ToolContext) -> dict:
-        """
-        Obtiene metadatos de las imágenes procesadas.
-
-        Returns:
-            Dict con metadatos de imágenes
-        """
-        try:
-            saved_artifacts = tool_context.state.get("saved_artifacts", [])
-
-            image_metadata = []
-            for artifact in saved_artifacts:
-                if "INE" in artifact.get("description", ""):
-                    image_metadata.append({
-                        "filename": artifact.get("filename"),
-                        "size_bytes": artifact.get("size_bytes"),
-                        "mime_type": artifact.get("mime_type"),
-                        "saved_at": artifact.get("saved_at"),
-                        "description": artifact.get("description")
-                    })
-
-            return {
-                "status": "success",
-                "message": f"Metadatos obtenidos para {len(image_metadata)} imagen(es)",
-                "metadata": image_metadata
-            }
-
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Error obteniendo metadatos: {e}"
-            }
-
     # Métodos auxiliares privados
 
     def _get_genai_client(self) -> genai.Client:
@@ -372,15 +335,21 @@ class ImageAnalysisTools:
             Dict con resultado del análisis
         """
         try:
-            # Obtener cliente Gen AI
-            client = self._get_genai_client()
+            model: str | None = current_config.ROOT_AGENT_MODEL
+            if not model:
+                return {
+                    "status": "error",
+                    "type": "unknown",
+                    "message": f"No model defined"
+                }
+            
+            client: genai.Client = self._get_genai_client()
 
-            # Obtener prompt de análisis
-            analysis_prompt = self._prompts.get_ine_analysis_prompt()
+            analysis_prompt: str = self._prompts.get_ine_analysis_prompt()
 
-            # Preparar contenido usando el nuevo SDK
-            contents = [
-                analysis_prompt,
+            # Armando input para la llamada a la LLM
+            contents: List[types.Part] = [
+                types.Part.from_text(text=analysis_prompt),
                 types.Part.from_bytes(
                     data=image_data,
                     mime_type=mime_type
@@ -388,7 +357,7 @@ class ImageAnalysisTools:
             ]
 
             # Safety settings para documentos oficiales
-            safety_settings = [
+            safety_settings: List[types.SafetySetting] = [
                 types.SafetySetting(
                     category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
                     threshold=types.HarmBlockThreshold.BLOCK_NONE
@@ -407,15 +376,15 @@ class ImageAnalysisTools:
                 ),
             ]
 
-            print(f"🤖 Enviando imagen al modelo {current_config.ROOT_AGENT_MODEL} para análisis...")
+            print(f"🤖 Enviando imagen al modelo {model} para análisis...")
 
-            # Usar la interfaz asíncrona del nuevo SDK
-            response = await client.aio.models.generate_content(
-                model=current_config.ROOT_AGENT_MODEL,
+            # Usar la interfaz asíncrona del SDK
+            response: types.GenerateContentResponse = await client.aio.models.generate_content(
+                model=model,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     safety_settings=safety_settings,
-                    temperature=0.0  # Para consistencia en clasificación
+                    temperature=0.01
                 )
             )
 
@@ -437,52 +406,35 @@ class ImageAnalysisTools:
                     "confidence": "high",
                     "analysis": analysis_result
                 }
-            elif "REVERSO" in analysis_result:
+            
+            if "REVERSO" in analysis_result:
                 return {
                     "status": "success",
                     "type": "back",
                     "confidence": "high",
                     "analysis": analysis_result
                 }
-            elif "INDETERMINADO" in analysis_result:
+            
+            if "INDETERMINADO" in analysis_result:
                 return {
                     "status": "uncertain",
                     "type": "unknown",
                     "confidence": "low",
                     "analysis": analysis_result
                 }
-            else:
-                # Si la respuesta no contiene las palabras clave esperadas,
-                # intentar inferir del contenido
-                lower_result = analysis_result.lower()
-                if any(word in lower_result for word in ["foto", "fotografía", "persona", "nombre", "curp", "domicilio"]):
-                    return {
-                        "status": "success",
-                        "type": "front",
-                        "confidence": "medium",
-                        "analysis": f"Inferido como frente: {analysis_result}"
-                    }
-                elif any(word in lower_result for word in ["código", "barra", "vigencia", "oficial", "autoridad", "qr"]):
-                    return {
-                        "status": "success",
-                        "type": "back",
-                        "confidence": "medium",
-                        "analysis": f"Inferido como reverso: {analysis_result}"
-                    }
-                else:
-                    return {
-                        "status": "uncertain",
-                        "type": "unknown",
-                        "confidence": "low",
-                        "analysis": f"Respuesta no clasificable: {analysis_result}"
-                    }
+            
+            return {
+                    "status": "error",
+                    "type": "unknown",
+                    "analysis": analysis_result
+                }
 
         except Exception as e:
             print(f"❌ Error en análisis con modelo Gen AI: {e}")
             return {
                 "status": "error",
                 "type": "unknown",
-                "message": f"Error en análisis: {e}"
+                "message": "No se pudo obtener un resultado. Intente de nuevo."
             }
 
     async def _save_image_artifact(
