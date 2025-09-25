@@ -63,35 +63,26 @@ class ImageAnalysisTools:
         try:
             # Obtener contenido del usuario actual
             user_content = tool_context.user_content
-
+            if not user_content:
+                return {
+                    "status": "error",
+                    "message": "No hay contenido de usuario"
+                }
+            
             user_content_parts: List[types.Part] | None = user_content.parts
             if not user_content_parts:
                 return {
                     "status": "error",
                     "message": "No parts in the user message"
                 }
-            
-            # Buscar imágenes en el contenido del usuario
-            image_parts: list[types.Part] = []
-            for part in user_content_parts:
-                part_inline_data: types.Blob | None = part.inline_data
-                if not part_inline_data: continue
-                if part_inline_data.mime_type:
-                    image_parts.append(part)
-
-            if not image_parts:
-                return {
-                    "status": "error",
-                    "message": "No hay imágenes en el mensaje. Por favor envía una imagen del INE."
-                }
 
             analyzed_images = []
 
-            for idx, image_part in enumerate(image_parts[:2]):  # Máximo 2 imágenes
+            for idx, image_part in enumerate(user_content_parts[:2]):  # Máximo 2 imágenes
                 if not image_part: 
                     print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la lista de imagenes")
                     continue
-
+                
                 inline_data: types.Blob | None = image_part.inline_data
                 if not inline_data: 
                     print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la Blob")
@@ -102,16 +93,16 @@ class ImageAnalysisTools:
                     print(f"❌ Error analizando imagen {idx + 1}: No existen datos para imagen.")
                     continue
 
-                image_hash: str = hashlib.md5(image_data).hexdigest()
-                print(f"🔍 Analizando imagen {idx + 1}: {len(image_data)} bytes, hash: {image_hash[:8]}")
-
                 mime_type: str | None = inline_data.mime_type
-                if not mime_type: 
-                    print(f"❌ Error analizando imagen {idx + 1}: No existen datos descriptivos de la imagen.")
+                if not mime_type or not mime_type.startswith('image/'): 
+                    print(f"❌ Error analizando imagen {idx + 1}: El archivo no es una imagen.")
                     continue
 
+                image_hash: str = hashlib.md5(image_data).hexdigest()
+                print(f"🔍 Analizando imagen {idx + 1}: {len(image_data)} bytes, hash: {image_hash[:4]}")
+
                 # Realizar análisis usando el modelo configurado
-                analysis_result = await self._analyze_image_with_model(
+                analysis_result: dict[str, str] = await self._analyze_image_with_model(
                     image_data,
                     mime_type=mime_type
                 )
@@ -223,29 +214,37 @@ class ImageAnalysisTools:
             Dict con resultado de validación de calidad
         """
         try:
-            user_content = tool_context.user_content
-
-            if not hasattr(user_content, 'parts') or not user_content.parts:
+            user_content: types.Content | None = tool_context.user_content
+            if not user_content:
                 return {
                     "status": "error",
-                    "message": "No hay contenido para validar"
+                    "message": "No hay contenido de usuario"
                 }
-
-            image_parts = []
-            for part in user_content.parts:
-                if hasattr(part, 'inline_data') and part.inline_data:
-                    if part.inline_data.mime_type and part.inline_data.mime_type.startswith('image/'):
-                        image_parts.append(part)
-
-            if not image_parts:
+            
+            user_content_parts: List[types.Part] | None = user_content.parts
+            if not user_content_parts:
                 return {
                     "status": "error",
-                    "message": "No hay imágenes para validar"
+                    "message": "No hay Parts para validar"
                 }
 
             validation_results = []
-            for idx, image_part in enumerate(image_parts):
-                image_data = image_part.inline_data.data
+            for idx, image_part in enumerate(user_content_parts):
+                inline_data: types.Blob | None = image_part.inline_data
+                if not inline_data: 
+                    print(f"❌ Error validando calidad de imagen {idx + 1}: No existe inline_data")
+                    continue
+
+                # Valiendo si el archivo es una imagen
+                mime_type: str | None = inline_data.mime_type
+                if not mime_type or not mime_type.startswith('image/'):
+                    print(f"❌ Error validando calidad de imagen {idx + 1}: El archivo no es una imagen")
+                    continue
+
+                image_data: bytes | None = inline_data.data
+                if not image_data: 
+                    print(f"❌ Error validando calidad de imagen {idx + 1}: No existe contenido de imagen")
+                    continue
                 image_size = len(image_data)
 
                 # Validaciones básicas
@@ -258,7 +257,7 @@ class ImageAnalysisTools:
                 validation_results.append({
                     "image_index": idx + 1,
                     "size_bytes": image_size,
-                    "mime_type": image_part.inline_data.mime_type,
+                    "mime_type": mime_type,
                     "quality": quality,
                     "is_valid": image_size >= 10000  # Al menos 10KB
                 })
