@@ -55,8 +55,7 @@ class OriginationPrompts:
         - Usa `verify_ine_processing()` con reintentos para obtener datos
 
         **4. Validaciones CURP:**
-        - Usa `validate_curp_format()` para verificar formato
-        - Usa `validate_curp()` para validar contra listas negras
+        - Usa `validate_curp()` para validar CURP
 
         **5. Captura de Formulario:**
         - Usa `submit_form_data()` con datos del usuario + datos INE
@@ -81,13 +80,12 @@ class OriginationPrompts:
         - **TRANSFERIR a `image_analysis_agent`**: Para análisis inteligente de imágenes INE
         - `process_ine_documents()`: Envía documentos al API para OCR
         - `verify_ine_processing()`: Verifica completitud del procesamiento
-        - `validate_curp()`: Valida CURP contra listas negras
+        - `validate_curp()`: Valida CURP. 
         - `submit_form_data()`: Envía formulario completo
         - `query_offers()`: Consulta ofertas disponibles
 
         **Validación:**
         - `validate_required_data()`: Valida datos por paso
-        - `validate_curp_format()`: Verifica formato CURP
         - `validate_rfc_format()`: Verifica formato RFC
 
         **Gestión de Imágenes:**

@@ -1,16 +1,12 @@
-import hashlib
-import time
 import re
-import base64
 import uuid
 import asyncio
 import requests
 
-from typing import List, Callable, Dict, Optional
+from typing import List, Callable, Dict
 from datetime import datetime
 
 from google.adk.tools.tool_context import ToolContext
-from google.genai.types import Content, Part, Blob
 from ....config import current_config
 
 class OriginationTools:
@@ -28,7 +24,6 @@ class OriginationTools:
             },
             'validation_tools': {
                 'validate_required_data': self.validate_required_data,
-                'validate_curp_format': self.validate_curp_format,
                 'validate_rfc_format': self.validate_rfc_format
             }
         }
@@ -109,10 +104,9 @@ class OriginationTools:
                     "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
                 }
 
-            
             # Obtener imágenes de artifacts o del estado
-            ine_front = tool_context.state.get('ine_front_image')
-            ine_back = tool_context.state.get('ine_back_image')
+            ine_front: str | None = tool_context.state.get('ine_front_image')
+            ine_back: str | None = tool_context.state.get('ine_back_image')
 
             if not ine_front or not ine_back:
                 return {
@@ -120,8 +114,8 @@ class OriginationTools:
                     "message": "Se requieren ambas imágenes del INE (frente y reverso)"
                 }
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
-            params = {"uuidFlujo": flow_uuid}
+            api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
+            params: Dict[str, str] = {"uuidFlujo": flow_uuid}
             
             headers = {
                 'User-Agent': 'Python-HTTP-Post-Client/1.0',
@@ -142,10 +136,6 @@ class OriginationTools:
             )
             response.raise_for_status()
 
-            data = response.json()
-
-            print(f"response ine documents {data}")
-
             return {
                 "status": "success",
                 "message": "Documentos INE enviados para procesamiento"
@@ -162,10 +152,8 @@ class OriginationTools:
     async def verify_ine_processing(self, tool_context: ToolContext, max_retries: int = 10) -> dict:
         """
         Verifica el estado del procesamiento INE con reintentos.
-
         Args:
             max_retries: Número máximo de reintentos
-
         Returns:
             Dict con los datos procesados o error
         """
@@ -176,10 +164,9 @@ class OriginationTools:
                     "status": "error",
                     "message": "Flujo no inicializado"
                 }
-
+            
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/estatus-ine"
             params = {"uuidFlujo": flow_uuid}
-
             headers = {
                 'User-Agent': 'Python-HTTP-Post-Client/1.0',
                 'X-API-KEY': current_config.KEY_ORIGINADOR,
@@ -189,33 +176,46 @@ class OriginationTools:
                 try:
                     response = requests.get(api_url, params=params, headers=headers, timeout=30)
                     response.raise_for_status()
-
-                    data = response.json()
-
+                    
+                    # Validar que sea JSON válido
+                    try:
+                        data = response.json()
+                    except ValueError:
+                        raise requests.RequestException("Respuesta no es JSON válido")
+                    
                     print(f"response ine processing {data}. attempt {attempt}")
-
-                    if data.get('completado', False):
+                    completado: bool = data.get('completado', False)
+                    
+                    if completado:
+                        # Procesamiento completado, preparar respuesta exitosa
                         form_data = data.get('formularioCaptura', {})
                         tool_context.state['user_data'] = form_data
-
                         return {
                             "status": "success",
                             "completed": True,
                             "user_data": form_data,
                             "message": "Procesamiento completado exitosamente"
                         }
-
-                    # Esperar antes del siguiente intento
-                    await asyncio.sleep(0.5)
-
+                    
+                    # No completado, esperar antes del siguiente intento
+                    if attempt < max_retries - 1:  # No esperar en el último intento
+                        await asyncio.sleep(0.5)
+                            
                 except requests.RequestException as e:
                     if attempt == max_retries - 1:
                         raise e
-                    await asyncio.sleep(2 ** attempt)
-
+                    await asyncio.sleep(1)
+            
+            # Si llegamos aquí, se agotaron los intentos
             return {
                 "status": "timeout",
                 "message": f"El procesamiento no se completó después de {max_retries} intentos"
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Error durante la verificación: {str(e)}"
             }
 
         except Exception as e:
@@ -226,17 +226,36 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def validate_curp(self, tool_context: ToolContext, curp: str) -> dict:
+    async def validate_curp(self, tool_context: ToolContext) -> dict:
         """
         Valida CURP contra lista negra y ofertas activas.
-
-        Args:
-            curp: CURP a validar
 
         Returns:
             Dict con resultado de validaciones
         """
         try:
+            user_data: dict = tool_context.state.get('user_data', {})
+            if not user_data:
+                return {
+                    "status": "error",
+                    "message": "Datos de usuario no disponibles. Procesa INE primero."
+                }
+            
+            curp: str | None = user_data.get('curp', None)
+            if not curp:
+                return {
+                    "status": "error",
+                    "message": "CURP faltante en el contexto actual."
+                }
+
+            validation: dict = self._validate_curp_format(curp)
+            valid: bool = validation.get('valid', False)
+            if not valid:
+                 return {
+                    "status": "error",
+                    "message": "El formato de la CURP no es válido."
+                }
+
             api_base = current_config.URL_ORIGINADOR
 
             flow_uuid = tool_context.state.get('flow_uuid')
@@ -253,31 +272,21 @@ class OriginationTools:
 
             params: Dict[str, str] = {"curp": curp, "uuidFlujo": flow_uuid}
 
-            # Ejecutar ambas validaciones en paralelo usando asyncio
-            async def call_api(url: str, params: dict):
-                headers = {
-                    'User-Agent': 'Python-HTTP-Post-Client/1.0',
-                    'X-API-KEY': current_config.KEY_ORIGINADOR,
-                }
-                loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(
-                    None,
-                    lambda: requests.post(url, params=params, headers=headers, timeout=30)
-                )
-
             blacklist_response, offers_response, renapo_response = await asyncio.gather(
-                call_api(blacklist_url, params),
-                call_api(offers_url, params),
-                call_api(renapo_url, params),
+                self._call_originador_api(blacklist_url, params),
+                self._call_originador_api(offers_url, params),
+                self._call_originador_api(renapo_url, params),
                 return_exceptions=True
             )
 
             # Procesar respuestas
-            results = {
+            results: Dict[str, str | bool] = {
                 "status": "success",
                 "curp": curp,
                 "blacklist_check": "error",
-                "active_offers_check": "error"
+                "active_offers_check": "error",
+                "active_renapo_check": "error",
+                "can_proceed": False
             }
 
             # Procesar resultado de lista negra
@@ -536,31 +545,6 @@ class OriginationTools:
             "message": "Validación exitosa" if is_valid else f"Campos faltantes: {', '.join(missing_fields)}"
         }
 
-    def validate_curp_format(self, tool_context: ToolContext, curp: str) -> dict:
-        """
-        Valida el formato de un CURP mexicano.
-
-        Args:
-            curp: CURP a validar
-
-        Returns:
-            Dict con resultado de validación
-        """
-        import re
-
-        if not curp:
-            return {"valid": False, "message": "CURP no proporcionado"}
-
-        # Patrón regex para CURP mexicano
-        curp_pattern = r'^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z]{2}$'
-
-        is_valid = bool(re.match(curp_pattern, curp.upper()))
-
-        return {
-            "valid": is_valid,
-            "curp": curp.upper(),
-            "message": "CURP válido" if is_valid else "Formato de CURP inválido"
-        }
 
     def validate_rfc_format(self, tool_context: ToolContext, rfc: str) -> dict:
         """
@@ -584,4 +568,43 @@ class OriginationTools:
             "valid": is_valid,
             "rfc": rfc.upper(),
             "message": "RFC válido" if is_valid else "Formato de RFC inválido"
+        }
+
+    # === Internal aux methods ===
+
+    # Ejecutar varias validaciones en paralelo usando asyncio
+    async def _call_originador_api(self, url: str, params: dict) -> requests.Response:
+        headers = {
+            'User-Agent': 'Python-HTTP-Post-Client/1.0',
+            'X-API-KEY': current_config.KEY_ORIGINADOR,
+        }
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: requests.post(url, params=params, headers=headers, timeout=30)
+        )
+
+    def _validate_curp_format(self, curp: str) -> dict:
+        """
+        Valida el formato de un CURP mexicano.
+
+        Args:
+            curp: CURP a validar
+
+        Returns:
+            Dict con resultado de validación
+        """
+
+        if not curp:
+            return {"valid": False, "message": "CURP no proporcionado"}
+
+        # Patrón regex para CURP mexicano
+        curp_pattern = r'^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z]{2}$'
+
+        is_valid = bool(re.match(curp_pattern, curp.upper()))
+
+        return {
+            "valid": is_valid,
+            "curp": curp.upper(),
+            "message": "CURP válido" if is_valid else "Formato de CURP inválido"
         }
