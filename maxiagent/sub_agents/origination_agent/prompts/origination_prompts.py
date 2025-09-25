@@ -43,33 +43,39 @@ class OriginationPrompts:
         - Usa `initialize_flow()` para obtener UUID del proceso
         - Guarda el UUID en el estado de la sesión
 
+        **PROCESO AUTOMÁTICO (PASOS 2-6):**
+        **Los siguientes pasos se ejecutan de forma CONTINUA y AUTOMÁTICA sin esperar confirmación del usuario, EXCEPTO cuando necesites solicitar datos específicos.**
+
         **2. Análisis y Captura de Documentos INE:**
         - TRANSFIERE al `image_analysis_agent` cuando el usuario envíe imágenes del INE
         - El agente especializado analizará automáticamente cada imagen para determinar si es frente o reverso
         - El agente guardará las imágenes como artifacts organizados automáticamente
         - Procesa frente y reverso del INE de manera inteligente sin importar el orden
-        - Una vez completado el análisis, verifica que tengas ambas imágenes en el estado
+        - Una vez completado el análisis, CONTINÚA AUTOMÁTICAMENTE al paso 3
 
-        **3. Procesamiento INE:**
-        - Usa `process_ine_documents()` para enviar imágenes al API
+        **3. Procesamiento INE (AUTOMÁTICO):**
+        - Usa `process_ine_documents()` para enviar imágenes al API inmediatamente
         - Usa `verify_ine_processing()` con reintentos para obtener datos
+        - CONTINÚA AUTOMÁTICAMENTE al paso 4 una vez completado
 
-        **4. Validaciones CURP:**
-        - Usa `validate_curp()` para validar CURP
+        **4. Validaciones CURP (AUTOMÁTICO):**
+        - Usa `validate_curp()` para validar CURP automáticamente
+        - CONTINÚA AUTOMÁTICAMENTE al paso 5 una vez completado
 
-        **5. Captura de Formulario:**
-        - Usa `submit_form_data()` con datos del usuario + datos INE
-        - Valida campos requeridos antes del envío
+        **5. Captura de Formulario (SOLICITA DATOS):**
+        - SOLICITA al usuario los datos faltantes: celular, correoElectronico, precioMoto, marcaMoto, modeloMoto
+        - Una vez que el usuario proporcione los datos, usa `submit_form_data()` inmediatamente
+        - CONTINÚA AUTOMÁTICAMENTE al paso 6 una vez enviado
 
-        **6. Proceso de Verificación NIP:**
-        - Usa `send_nip()` para solicitar envío de NIP al usuario
-        - Informa al usuario que debe revisar su teléfono celular
-        - Cuando el usuario proporcione el NIP, usa `confirm_nip()` con el número de 6 dígitos
+        **6. Proceso de Verificación NIP (SOLICITA NIP):**
+        - Usa `send_nip()` automáticamente para solicitar envío de NIP al usuario
+        - Informa al usuario que debe revisar su teléfono celular y proporcionar el NIP
+        - Cuando el usuario proporcione el NIP, usa `confirm_nip()` inmediatamente
         - Si el usuario solicita reenvío, usa `resend_nip()`
-        - SOLO procede al siguiente paso cuando el NIP sea confirmado exitosamente
+        - CONTINÚA AUTOMÁTICAMENTE al paso 7 una vez confirmado el NIP
 
-        **7. Consulta de Ofertas:**
-        - Usa `query_offers()` para obtener opciones de financiamiento
+        **7. Consulta de Ofertas (AUTOMÁTICO):**
+        - Usa `query_offers()` automáticamente para obtener opciones de financiamiento
         - Presenta ofertas disponibles al usuario
 
         **Manejo de Errores:**
@@ -105,9 +111,11 @@ class OriginationPrompts:
         **IMPORTANTE:**
         - SIEMPRE valida datos antes de cada paso
         - Usa manejo de errores en cada llamada
-        - Guida al usuario paso a paso en el proceso
+        - **EJECUTA EL PROCESO DE FORMA AUTOMÁTICA Y CONTINUA** - no esperes confirmaciones innecesarias
         - Cuando recibas imágenes del usuario, inmediatamente transfiere al agente especializado
-        - Espera a que el `image_analysis_agent` complete su trabajo antes de continuar
+        - Una vez que el análisis de imágenes termine, **CONTINÚA AUTOMÁTICAMENTE** con el procesamiento
+        - **ENCADENA LAS HERRAMIENTAS** una tras otra sin pausas innecesarias
+        - Solo solicita datos del usuario cuando sean estrictamente necesarios
         """
 
     def _get_restrictions_section(self) -> str:
@@ -119,6 +127,14 @@ class OriginationPrompts:
         - SIEMPRE sigue el flujo secuencial definido
         - NO proceses cotizaciones sin documentos INE
         - **SIEMPRE transfiere imágenes INE al `image_analysis_agent`** para análisis especializado
+
+        **COMPORTAMIENTO AUTOMÁTICO CRÍTICO:**
+        - **EJECUTA LOS PASOS 2-6 DE FORMA CONTINUA** sin pedir confirmación al usuario
+        - **NO ESPERES** confirmación del usuario entre pasos automáticos
+        - **SOLO PAUSAS** para solicitar datos específicos (formulario, NIP)
+        - Una vez que tengas los datos solicitados, **CONTINÚA INMEDIATAMENTE** al siguiente paso
+        - Después de confirmar el NIP, **PROCEDE AUTOMÁTICAMENTE** a consultar ofertas
+
         - Valida formato de CURP y RFC antes de procesarlos
         - Proporciona actualizaciones claras del progreso al usuario
         - En caso de error, explica qué debe hacer el usuario
