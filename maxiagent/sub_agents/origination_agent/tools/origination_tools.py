@@ -44,6 +44,9 @@ class OriginationTools:
                 'verify_ine_processing': self.verify_ine_processing,
                 'validate_curp': self.validate_curp,
                 'submit_form_data': self.submit_form_data,
+                'send_nip': self.send_nip,
+                'confirm_nip': self.confirm_nip,
+                'resend_nip': self.resend_nip,
                 'query_offers': self.query_offers
             },
             'validation_tools': {
@@ -316,7 +319,7 @@ class OriginationTools:
         Envía los datos del formulario completo al API.
 
         Args:
-            additional_data: Datos adicionales del usuario (celular, email, ingresos, etc.)
+            additional_data: Datos adicionales del usuario (celular, email.)
 
         Returns:
             Dict con resultado del envío
@@ -349,7 +352,7 @@ class OriginationTools:
                 "codigoPostal": "87904", # user_data.get('codigoPostal'),
                 "rfc": user_data.get('rfc'),
                 "correoElectronico": additional_data.get('correoElectronico'),
-                "ingresoMensual": additional_data.get('ingresoMensual'),
+                "ingresoMensual": None,
                 "precioMoto": additional_data.get('precioMoto'),
                 "enganche": None,
                 "numeroPromotor": "MAXIAGENT",
@@ -363,8 +366,8 @@ class OriginationTools:
             }
 
             # Validar datos requeridos
-            required_fields = ['celular', 'curp', 'correoElectronico', 'ingresoMensual', 'precioMoto']
-            missing_fields = [field for field in required_fields if not form_data.get(field)]
+            required_fields: List[str] = ['celular', 'curp', 'correoElectronico', 'precioMoto', 'marcaMoto', 'modeloMoto']
+            missing_fields: List[str] = [field for field in required_fields if not form_data.get(field)]
 
             if missing_fields:
                 return {
@@ -382,6 +385,7 @@ class OriginationTools:
                 json_data=form_data,
                 timeout=30
             )
+            response.raise_for_status()
 
             # Guardar datos del formulario en estado
             tool_context.state['form_data'] = form_data
@@ -400,12 +404,168 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def query_offers(self, tool_context: ToolContext, location_data: dict) -> dict:
+    async def send_nip(self, tool_context: ToolContext) -> dict:
         """
-        Consulta ofertas de financiamiento disponibles.
+        Solicita el envío de un NIP al usuario.
+
+        Returns:
+            Dict con resultado del envío del NIP
+        """
+        try:
+            flow_uuid = tool_context.state.get('flow_uuid')
+            if not flow_uuid:
+                return {
+                    "status": "error",
+                    "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
+                }
+
+            # Verificar que se haya enviado el formulario
+            form_data = tool_context.state.get('form_data')
+            if not form_data:
+                return {
+                    "status": "error",
+                    "message": "Formulario no enviado. Ejecuta submit_form_data primero."
+                }
+
+            api_url = f"{current_config.URL_ORIGINADOR}/originacion/pedir-nip"
+            params = {"uuidFlujo": flow_uuid}
+
+            response = await self._call_originador_api(
+                api_url,
+                method='GET',
+                params=params,
+                timeout=30
+            )
+
+            # Guardar estado del NIP
+            tool_context.state['nip_requested'] = True
+
+            return {
+                "status": "success",
+                "message": "NIP enviado exitosamente. El usuario debe revisar su teléfono celular."
+            }
+
+        except Exception as e:
+            error_msg = f"Error enviando NIP: {e}"
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
+
+    async def confirm_nip(self, tool_context: ToolContext, nip: str) -> dict:
+        """
+        Confirma el NIP ingresado por el usuario.
 
         Args:
-            location_data: Datos de ubicación (idMunicipio, idEstado, etc.)
+            nip: NIP de 6 dígitos ingresado por el usuario
+
+        Returns:
+            Dict con resultado de la confirmación del NIP
+        """
+        try:
+            flow_uuid = tool_context.state.get('flow_uuid')
+            if not flow_uuid:
+                return {
+                    "status": "error",
+                    "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
+                }
+
+            # Verificar que se haya solicitado el NIP
+            nip_requested = tool_context.state.get('nip_requested', False)
+            if not nip_requested:
+                return {
+                    "status": "error",
+                    "message": "NIP no solicitado. Ejecuta send_nip primero."
+                }
+
+            # Validar formato del NIP
+            if not nip or len(nip) != 6 or not nip.isdigit():
+                return {
+                    "status": "error",
+                    "message": "NIP debe ser un número de 6 dígitos."
+                }
+
+            api_url = f"{current_config.URL_ORIGINADOR}/originacion/confirmar-nip"
+            params = {
+                "uuidFlujo": flow_uuid,
+                "nip": nip
+            }
+
+            response: requests.Response = await self._call_originador_api(
+                api_url,
+                method='GET',
+                params=params,
+                timeout=30
+            )
+            response.raise_for_status()
+
+            # Guardar estado de NIP confirmado
+            tool_context.state['nip_confirmed'] = True
+
+            return {
+                "status": "success",
+                "message": "NIP confirmado exitosamente. Puedes proceder a consultar ofertas."
+            }
+
+        except Exception as e:
+            error_msg = f"Error confirmando NIP: {e}"
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
+
+    async def resend_nip(self, tool_context: ToolContext) -> dict:
+        """
+        Reenvía el NIP al usuario.
+
+        Returns:
+            Dict con resultado del reenvío del NIP
+        """
+        try:
+            flow_uuid = tool_context.state.get('flow_uuid')
+            if not flow_uuid:
+                return {
+                    "status": "error",
+                    "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
+                }
+
+            # Verificar que se haya solicitado el NIP previamente
+            nip_requested = tool_context.state.get('nip_requested', False)
+            if not nip_requested:
+                return {
+                    "status": "error",
+                    "message": "Debes solicitar un NIP primero usando send_nip."
+                }
+
+            api_url = f"{current_config.URL_ORIGINADOR}/originacion/reenviar-nip"
+            params = {"uuidFlujo": flow_uuid}
+
+            response = await self._call_originador_api(
+                api_url,
+                method='GET',
+                params=params,
+                timeout=30
+            )
+            response.raise_for_status()
+
+            return {
+                "status": "success",
+                "message": "NIP reenviado exitosamente. El usuario debe revisar su teléfono celular."
+            }
+
+        except Exception as e:
+            error_msg = f"Error reenviando NIP: {e}"
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
+
+    async def query_offers(self, tool_context: ToolContext) -> dict:
+        """
+        Consulta ofertas de financiamiento disponibles.
 
         Returns:
             Dict con ofertas disponibles
@@ -424,32 +584,24 @@ class OriginationTools:
                     "status": "error",
                     "message": "Flujo no inicializado"
                 }
-            
-            # Preparar payload para consulta de ofertas
-            offer_query = {
-                "ingresoMensual": form_data.get('ingresoMensual'),
-                "precioMoto": float(form_data.get('precioMoto', 0)),
-                "garantia": None,
-                "fechaNacimiento": form_data.get('fechaNacimiento'),
-                "idMunicipio": location_data.get('idMunicipio'),
-                "idEstado": location_data.get('idEstado'),
-                "codigoPostal": form_data.get('codigoPostal'),
-                "idSucursal": location_data.get('idSucursal', 1),
-                "idDistribuidor": location_data.get('idDistribuidor', 1),
-                "marcaMoto": form_data.get('marcaMoto'),
-                "modeloMoto": form_data.get('modeloMoto'),
-                "fechaHoraCreacionOferta": datetime.now().isoformat(),
-                "idUsuarioCreacion": form_data.get('fk_usuario_creacion'),
-                "idOferta": str(uuid.uuid4()),
-                "idPais": location_data.get('idPais', 'MX')
-            }
+
+            # Verificar que el NIP haya sido confirmado
+            nip_confirmed = tool_context.state.get('nip_confirmed', False)
+            if not nip_confirmed:
+                return {
+                    "status": "error",
+                    "message": "NIP no confirmado. Confirma el NIP usando confirm_nip primero."
+                }
 
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/consultar-ofertas"
+            params = {
+                "uuidFlujo": flow_uuid
+            }
 
-            response = await self._call_originador_api(
+            response: requests.Response = await self._call_originador_api(
                 api_url,
-                method='POST',
-                json_data=offer_query,
+                method='GET',
+                params=params,
                 timeout=45
             )
             offers_data = response.json()
@@ -463,7 +615,7 @@ class OriginationTools:
                 "status": "success",
                 "message": "Ofertas consultadas exitosamente",
                 "offers": offers_data,
-                "offer_count": len(offers_data.get('offers', []))
+                "offer_count": len(offers_data)
             }
 
         except Exception as e:

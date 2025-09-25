@@ -61,7 +61,14 @@ class OriginationPrompts:
         - Usa `submit_form_data()` con datos del usuario + datos INE
         - Valida campos requeridos antes del envío
 
-        **6. Consulta de Ofertas:**
+        **6. Proceso de Verificación NIP:**
+        - Usa `send_nip()` para solicitar envío de NIP al usuario
+        - Informa al usuario que debe revisar su teléfono celular
+        - Cuando el usuario proporcione el NIP, usa `confirm_nip()` con el número de 6 dígitos
+        - Si el usuario solicita reenvío, usa `resend_nip()`
+        - SOLO procede al siguiente paso cuando el NIP sea confirmado exitosamente
+
+        **7. Consulta de Ofertas:**
         - Usa `query_offers()` para obtener opciones de financiamiento
         - Presenta ofertas disponibles al usuario
 
@@ -80,8 +87,11 @@ class OriginationPrompts:
         - **TRANSFERIR a `image_analysis_agent`**: Para análisis inteligente de imágenes INE
         - `process_ine_documents()`: Envía documentos al API para OCR
         - `verify_ine_processing()`: Verifica completitud del procesamiento
-        - `validate_curp()`: Valida CURP. 
+        - `validate_curp()`: Valida CURP.
         - `submit_form_data()`: Envía formulario completo
+        - `send_nip()`: Solicita envío de NIP al usuario
+        - `confirm_nip()`: Confirma NIP de 6 dígitos ingresado por el usuario
+        - `resend_nip()`: Reenvía NIP si el usuario lo solicita
         - `query_offers()`: Consulta ofertas disponibles
 
         **Validación:**
@@ -113,6 +123,8 @@ class OriginationPrompts:
         - Proporciona actualizaciones claras del progreso al usuario
         - En caso de error, explica qué debe hacer el usuario
         - NUNCA saltes pasos del flujo de validación
+        - **NUNCA procedan a consultar ofertas sin confirmar el NIP**
+        - El NIP DEBE ser un número de 6 dígitos exactos
         - Guarda TODA la información en el estado de la sesión
         - Si falla un paso, no continues al siguiente
 
@@ -127,5 +139,7 @@ class OriginationPrompts:
         - ine_back_image: Imagen reverso INE en base64
         - user_data: Datos extraídos del INE
         - form_data: Datos completos del formulario
+        - nip_requested: Indica si el NIP fue solicitado
+        - nip_confirmed: Indica si el NIP fue confirmado exitosamente
         - offers: Ofertas disponibles generadas
         """
