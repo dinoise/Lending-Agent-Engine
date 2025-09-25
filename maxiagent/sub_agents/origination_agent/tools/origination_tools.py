@@ -12,6 +12,30 @@ from ....config import current_config
 class OriginationTools:
     """Clase para gestionar las herramientas del agente de originación."""
 
+    VALIDATION_ENDPOINTS = {
+        'blacklist': {
+            'url_path': '/originacion/validarCurpListaNegra',
+            'check_key': 'blacklist_check',
+            'details_key': 'blacklist_details',
+            'default_message': 'Es lista negra',
+            'success_value': 'NoEncontrado_CURP'
+        },
+        'offers': {
+            'url_path': '/originacion/validarOfertasActivas',
+            'check_key': 'active_offers_check',
+            'details_key': 'offers_details',
+            'default_message': 'Tiene activo',
+            'success_value': 'Validacion de ofertas activas exitosa'
+        },
+        'renapo': {
+            'url_path': '/originacion/validacion-curp',
+            'check_key': 'active_renapo_check',
+            'details_key': 'renapo_details',
+            'default_message': 'no es CURP valida.',
+            'success_value': 'CURP válido'
+        }
+    }
+
     def __init__(self):
         self._tools = {
             'quotation_flow': {
@@ -211,12 +235,6 @@ class OriginationTools:
                 "status": "timeout",
                 "message": f"El procesamiento no se completó después de {max_retries} intentos"
             }
-            
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Error durante la verificación: {str(e)}"
-            }
 
         except Exception as e:
             error_msg = f"Error verificando procesamiento INE: {e}"
@@ -234,6 +252,7 @@ class OriginationTools:
             Dict con resultado de validaciones
         """
         try:
+            # Validaciones iniciales
             user_data: dict = tool_context.state.get('user_data', {})
             if not user_data:
                 return {
@@ -249,85 +268,61 @@ class OriginationTools:
                 }
 
             validation: dict = self._validate_curp_format(curp)
-            valid: bool = validation.get('valid', False)
-            if not valid:
-                 return {
+            if not validation.get('valid', False):
+                return {
                     "status": "error",
                     "message": "El formato de la CURP no es válido."
                 }
-
-            api_base = current_config.URL_ORIGINADOR
 
             flow_uuid = tool_context.state.get('flow_uuid')
             if not flow_uuid:
                 return {
                     "status": "error",
-                    "message": "Flujo no inicializado"
+                    "message": "Flujo no inicializado."
                 }
             
-            # Preparar llamadas paralelas
-            blacklist_url: str = f"{api_base}/originacion/validarCurpListaNegra"
-            offers_url: str = f"{api_base}/originacion/validarOfertasActivas"
-            renapo_url: str = f"{api_base}/originacion/validacion-curp"
+            api_base: str | None = current_config.URL_ORIGINADOR
+            if not api_base:
+                return {
+                    "status": "error",
+                    "message": "No hay API para consultar."
+                }
 
-            params: Dict[str, str] = {"curp": curp, "uuidFlujo": flow_uuid}
+            # Ejecutar validaciones en paralelo
+            responses = await self._execute_parallel_validations(curp, flow_uuid, api_base)
 
-            blacklist_response, offers_response, renapo_response = await asyncio.gather(
-                self._call_originador_api(blacklist_url, params),
-                self._call_originador_api(offers_url, params),
-                self._call_originador_api(renapo_url, params),
-                return_exceptions=True
-            )
-
-            # Procesar respuestas
+            # Inicializar resultados
             results: Dict[str, str | bool] = {
                 "status": "success",
                 "curp": curp,
-                "blacklist_check": "error",
-                "active_offers_check": "error",
-                "active_renapo_check": "error",
                 "can_proceed": False
             }
+            
+            # Inicializar checks como error
+            for config in self.VALIDATION_ENDPOINTS.values():
+                results[config['check_key']] = "error"
 
-            # Procesar resultado de lista negra
-            if isinstance(blacklist_response, requests.Response):
-                blacklist_response.raise_for_status()
-                blacklist_data = blacklist_response.json()
-                results["blacklist_check"] = blacklist_data.get('mensaje') if blacklist_data.get('mensaje') else "Es lista negra"
-                results["blacklist_details"] = blacklist_data
+            # Procesar todas las respuestas usando la configuración
+            response_data = {}
+            for response, (endpoint_name, config) in zip(responses, self.VALIDATION_ENDPOINTS.items()):
+                data = self._process_api_response(response, results, config)
+                response_data[endpoint_name] = data
 
-            # Procesar resultado de ofertas activas
-            if isinstance(offers_response, requests.Response):
-                offers_response.raise_for_status()
-                offers_data = offers_response.json()
-                results["active_offers_check"] = offers_data.get('mensaje') if offers_data.get('mensaje') else "Tiene activo"
-                results["offers_details"] = offers_data
-
-            if isinstance(renapo_response, requests.Response):
-                renapo_response.raise_for_status()
-                renapo_data = renapo_response.json()
-                results["active_renapo_check"] = renapo_data.get('mensaje') if renapo_data.get('mensaje') else "no es CURP valida."
-                results["renapo_details"] = renapo_data
-
-            # Determinar si puede continuar
-            can_proceed: bool = (
-                results["blacklist_check"] == "NoEncontrado_CURP" and
-                results["active_offers_check"] == "Validacion de ofertas activas exitosa" and 
-                results["active_renapo_check"] == "CURP válido"
-            )
-
+            # Determinar si puede continuar usando la configuración
+            can_proceed: bool = all(
+                                    results[config['check_key']] == config['success_value']
+                                    for config in self.VALIDATION_ENDPOINTS.values()
+                                )
+            
             results["can_proceed"] = can_proceed
             results["message"] = "Validación completada" if can_proceed else "CURP no válido para proceso"
 
             return results
 
         except Exception as e:
-            error_msg = f"Error validando CURP: {e}"
-            print(error_msg)
             return {
                 "status": "error",
-                "message": error_msg,
-                "curp": curp
+                "message": f"Error durante validación: {str(e)}"
             }
 
     async def submit_form_data(self, tool_context: ToolContext, additional_data: dict) -> dict:
@@ -608,3 +603,47 @@ class OriginationTools:
             "curp": curp.upper(),
             "message": "CURP válido" if is_valid else "Formato de CURP inválido"
         }
+    
+    def _process_api_response(self, response, results: Dict, config: Dict) -> dict:
+        """
+        Procesa una respuesta de API y actualiza el diccionario de resultados.
+        
+        Args:
+            response: La respuesta HTTP o excepción
+            results: Diccionario donde almacenar los resultados
+            config: Configuración del endpoint (keys, mensajes, etc.)
+            
+        Returns:
+            dict or None: Los datos JSON de la respuesta o None si no es válida
+        """
+        if not isinstance(response, requests.Response):
+            return {}
+        
+        response.raise_for_status()
+        data = response.json()
+        results[config['check_key']] = data.get('mensaje', config['default_message'])
+        results[config['details_key']] = data
+        return data
+
+    async def _execute_parallel_validations(self, curp: str, flow_uuid: str, api_base: str) -> list:
+        """
+        Ejecuta todas las validaciones de CURP en paralelo.
+        
+        Args:
+            curp: El CURP a validar
+            flow_uuid: UUID del flujo
+            api_base: URL base de la API
+            
+        Returns:
+            Tuple con las respuestas de todas las validaciones
+        """
+        params = {"curp": curp, "uuidFlujo": flow_uuid}
+        
+        # Crear las tareas paralelas usando la configuración
+        tasks = []
+        for endpoint_config in self.VALIDATION_ENDPOINTS.values():
+            url = f"{api_base}{endpoint_config['url_path']}"
+            task = self._call_originador_api(url, params)
+            tasks.append(task)
+        
+        return await asyncio.gather(*tasks, return_exceptions=True)
