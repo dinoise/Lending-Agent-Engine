@@ -64,13 +64,20 @@ class ImageAnalysisTools:
             # Obtener contenido del usuario actual
             user_content = tool_context.user_content
 
+            user_content_parts: List[types.Part] | None = user_content.parts
+            if not user_content_parts:
+                return {
+                    "status": "error",
+                    "message": "No parts in the user message"
+                }
+            
             # Buscar imágenes en el contenido del usuario
-            image_parts = []
-            if hasattr(user_content, 'parts') and user_content.parts:
-                for part in user_content.parts:
-                    if hasattr(part, 'inline_data') and part.inline_data:
-                        if part.inline_data.mime_type and part.inline_data.mime_type.startswith('image/'):
-                            image_parts.append(part)
+            image_parts: list[types.Part] = []
+            for part in user_content_parts:
+                part_inline_data: types.Blob | None = part.inline_data
+                if not part_inline_data: continue
+                if part_inline_data.mime_type:
+                    image_parts.append(part)
 
             if not image_parts:
                 return {
@@ -81,18 +88,32 @@ class ImageAnalysisTools:
             analyzed_images = []
 
             for idx, image_part in enumerate(image_parts[:2]):  # Máximo 2 imágenes
-                image_data = image_part.inline_data.data
-                image_hash = hashlib.md5(image_data).hexdigest()
+                if not image_part: 
+                    print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la lista de imagenes")
+                    continue
 
+                inline_data: types.Blob | None = image_part.inline_data
+                if not inline_data: 
+                    print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la Blob")
+                    continue
+
+                image_data: bytes | None = inline_data.data
+                if not image_data: 
+                    print(f"❌ Error analizando imagen {idx + 1}: No existen datos para imagen.")
+                    continue
+
+                image_hash: str = hashlib.md5(image_data).hexdigest()
                 print(f"🔍 Analizando imagen {idx + 1}: {len(image_data)} bytes, hash: {image_hash[:8]}")
 
-                # Crear prompt específico para análisis
-                analysis_prompt = self._prompts.get_ine_analysis_prompt()
+                mime_type: str | None = inline_data.mime_type
+                if not mime_type: 
+                    print(f"❌ Error analizando imagen {idx + 1}: No existen datos descriptivos de la imagen.")
+                    continue
 
-                # Realizar análisis usando el modelo configurado (el nuevo SDK maneja el contenido internamente)
+                # Realizar análisis usando el modelo configurado
                 analysis_result = await self._analyze_image_with_model(
                     image_data,
-                    mime_type=image_part.inline_data.mime_type
+                    mime_type=mime_type
                 )
 
                 if analysis_result["status"] != "success":
@@ -128,10 +149,10 @@ class ImageAnalysisTools:
                 tool_context.state[state_key] = base64_data
 
                 # Guardar como artifact
-                artifact_result = await self._save_image_artifact(
+                artifact_result: dict[str, str]  = await self._save_image_artifact(
                     tool_context,
                     filename,
-                    image_part.inline_data.mime_type,
+                    mime_type,
                     f"INE {image_type}",
                     image_data
                 )
