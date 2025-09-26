@@ -2,6 +2,7 @@ import re
 import asyncio
 import requests
 
+from requests.auth import HTTPBasicAuth
 from typing import List, Callable, Dict
 
 from google.adk.tools.tool_context import ToolContext
@@ -142,7 +143,7 @@ class OriginationTools:
             api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            payload = {
+            payload: Dict[str, str] = {
                 "frenteBase64": ine_front,
                 "reversoBase64": ine_back
             }
@@ -209,7 +210,6 @@ class OriginationTools:
                     except ValueError:
                         raise requests.RequestException("Respuesta no es JSON válido")
                     
-                    print(f"response ine processing {data}. attempt {attempt}")
                     completado: bool = data.get('completado', False)
                     
                     if completado:
@@ -336,20 +336,38 @@ class OriginationTools:
             Dict con resultado del envío
         """
         try:
-            user_data = tool_context.state.get('user_data', {})
+            user_data: dict = tool_context.state.get('user_data', {})
             if not user_data:
                 return {
                     "status": "error",
                     "message": "Datos de usuario no disponibles. Procesa INE primero."
                 }
 
-            flow_uuid = tool_context.state.get('flow_uuid')
+            flow_uuid: str = tool_context.state.get('flow_uuid')
             if not flow_uuid:
                 return {
                     "status": "error",
                     "message": "Flujo no inicializado"
                 }
             
+            codigoPostal = user_data.get('codigoPostal')
+            if not codigoPostal:
+                return {
+                    "status": "error",
+                    "message": "Código postal no disponible en los datos del INE"
+                }
+
+            # Obteniendo los datos de dirección
+            address_data: dict = self._get_address_data(codigoPostal)
+
+            # Validar que se obtuvieron los datos de dirección correctamente
+            if not address_data.get('success', False):
+                error_msg = address_data.get('error', 'Error desconocido obteniendo datos de dirección')
+                return {
+                    "status": "error",
+                    "message": f"No se pudieron obtener los datos de dirección: {error_msg}"
+                }
+
             # Combinar datos del INE con datos adicionales
             form_data = {
                 "celular": additional_data.get('celular'),
@@ -360,7 +378,7 @@ class OriginationTools:
                 "segundoApellido": user_data.get('segundoApellido'),
                 "fechaNacimiento": user_data.get('fechaNacimiento'),
                 "calle": user_data.get('calle'),
-                "codigoPostal": "87904", # user_data.get('codigoPostal'),
+                "codigoPostal": codigoPostal,
                 "rfc": user_data.get('rfc'),
                 "correoElectronico": additional_data.get('correoElectronico'),
                 "ingresoMensual": None,
@@ -369,9 +387,9 @@ class OriginationTools:
                 "numeroPromotor": "MAXIAGENT",
                 "marcaMoto": additional_data.get('marcaMoto'),
                 "modeloMoto": additional_data.get('modeloMoto'),
-                "estado": "28", # additional_data.get('estado'),
-                "municipio": "2035", # additional_data.get('municipio'),
-                "colonia": "136710", # additional_data.get('colonia'),
+                "estado": address_data.get("idEstado"),
+                "municipio": address_data.get("idMunicipio"),
+                "colonia": address_data.get("idColonia"),
                 "fk_usuario_creacion": "",
                 "mostrarCampos": None
             }
@@ -380,23 +398,28 @@ class OriginationTools:
             required_fields: List[str] = ['celular', 'curp', 'correoElectronico', 'precioMoto', 'marcaMoto', 'modeloMoto']
             missing_fields: List[str] = [field for field in required_fields if not form_data.get(field)]
 
-            if missing_fields:
+            # Validar datos de dirección requeridos
+            address_required_fields: List[str] = ['estado', 'municipio', 'colonia']
+            missing_address_fields: List[str] = [field for field in address_required_fields if not form_data.get(field)]
+
+            all_missing_fields = missing_fields + missing_address_fields
+
+            if all_missing_fields:
                 return {
                     "status": "error",
-                    "message": f"Campos requeridos faltantes: {', '.join(missing_fields)}"
+                    "message": f"Campos requeridos faltantes: {', '.join(all_missing_fields)}"
                 }
 
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            response: requests.Response = await self._call_originador_api(
+            requests.Response = await self._call_originador_api(
                 api_url,
                 method='POST',
                 params=params,
                 json_data=form_data,
                 timeout=30
             )
-            print(f"FORM RES {response.json()}")
 
             # Guardar datos del formulario en estado
             tool_context.state['form_data'] = form_data
@@ -448,7 +471,7 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/pedir-nip"
             params = {"uuidFlujo": flow_uuid}
 
-            response = await self._call_originador_api(
+            await self._call_originador_api(
                 api_url,
                 method='GET',
                 params=params,
@@ -517,7 +540,7 @@ class OriginationTools:
                 "nip": nip
             }
 
-            response: requests.Response = await self._call_originador_api(
+            await self._call_originador_api(
                 api_url,
                 method='GET',
                 params=params,
@@ -573,7 +596,7 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/reenviar-nip"
             params = {"uuidFlujo": flow_uuid}
 
-            response = await self._call_originador_api(
+            await self._call_originador_api(
                 api_url,
                 method='GET',
                 params=params,
@@ -643,8 +666,6 @@ class OriginationTools:
             )
             offers_data = response.json()
 
-            print(f"offers_data {offers_data}")
-
             # Guardar ofertas en estado
             tool_context.state['offers'] = offers_data
 
@@ -708,7 +729,6 @@ class OriginationTools:
             "missing_fields": missing_fields,
             "message": "Validación exitosa" if is_valid else f"Campos faltantes: {', '.join(missing_fields)}"
         }
-
 
     def validate_rfc_format(self, tool_context: ToolContext, rfc: str) -> dict:
         """
@@ -950,3 +970,129 @@ class OriginationTools:
                 return None
             except:
                 return None
+    
+    def _get_address_data(self, codigo_postal: str) -> dict:
+        """
+        Obtiene datos de dirección (estado, municipio, colonia) basado en código postal.
+
+        Args:
+            codigo_postal (str): Código postal para consultar los datos de dirección
+
+        Returns:
+            dict: Datos de dirección con idEstado, idMunicipio, idColonia o error
+        """
+        try:
+            # Validar código postal
+            if not codigo_postal:
+                return {
+                    "success": False,
+                    "error": "Código postal es requerido"
+                }
+
+            # Validar formato de código postal (5 dígitos)
+            if not isinstance(codigo_postal, str) or not codigo_postal.isdigit() or len(codigo_postal) != 5:
+                return {
+                    "success": False,
+                    "error": "Código postal debe ser una cadena de 5 dígitos"
+                }
+
+            # Validar configuración requerida
+            required_configs = [
+                ('URL_DATA_MAXI', current_config.URL_DATA_MAXI),
+                ('USRNAME_DATA_MAXI', current_config.USRNAME_DATA_MAXI),
+                ('PASSWORD_DATA_MAXI', current_config.PASSWORD_DATA_MAXI)
+            ]
+
+            for config_name, config_value in required_configs:
+                if not config_value:
+                    return {
+                        "success": False,
+                        "error": f"Configuración faltante: {config_name}"
+                    }
+
+            # Configurar la URL y credenciales
+            url = f"{current_config.URL_DATA_MAXI}/sepomex/obtenerdireccion/completa"
+
+            # Preparar los datos para el POST
+            data: Dict[str, str] = {
+                "id": codigo_postal
+            }
+
+            # Configurar headers
+            headers: Dict[str, str] = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+
+            # Realizar la petición POST con autenticación básica
+            response: requests.Response = requests.post(
+                url=url,
+                json=data,
+                headers=headers,
+                auth=HTTPBasicAuth(current_config.USRNAME_DATA_MAXI, current_config.PASSWORD_DATA_MAXI),
+                timeout=30
+            )
+
+            # Verificar el status code
+            response.raise_for_status()
+
+            # Procesar respuesta JSON
+            response_data = response.json()
+
+            # Validar estructura de la respuesta
+            if not isinstance(response_data, dict):
+                return {
+                    "success": False,
+                    "error": "Formato de respuesta inválido del servicio"
+                }
+
+            if "data" not in response_data:
+                return {
+                    "success": False,
+                    "error": "No se encontraron datos para el código postal proporcionado"
+                }
+
+            data_list = response_data["data"]
+            if not isinstance(data_list, list) or len(data_list) == 0:
+                return {
+                    "success": False,
+                    "error": "No se encontraron datos de dirección para el código postal"
+                }
+
+            address_data = data_list[0]
+
+            # Validar campos requeridos en la respuesta
+            required_fields = ["idEstado", "idMunicipio", "idColonia"]
+            missing_fields = [field for field in required_fields if field not in address_data or not address_data[field]]
+
+            if missing_fields:
+                return {
+                    "success": False,
+                    "error": f"Datos incompletos en la respuesta: faltan {', '.join(missing_fields)}"
+                }
+
+            # Retornar datos exitosos
+            return {
+                "success": True,
+                "idEstado": address_data["idEstado"],
+                "idMunicipio": address_data["idMunicipio"],
+                "idColonia": address_data["idColonia"],
+                "codigo_postal": codigo_postal
+            }
+
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "obtener datos de dirección")
+            return {
+                "success": False,
+                "error": error_msg
+            }
+        except (ValueError, KeyError, TypeError) as e:
+            return {
+                "success": False,
+                "error": f"Error procesando respuesta del servicio: {str(e)}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error inesperado obteniendo datos de dirección: {str(e)}"
+            }

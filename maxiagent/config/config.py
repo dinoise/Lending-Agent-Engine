@@ -37,6 +37,10 @@ class DevelopmentConfig(Config):
 
     API_MAXIKASH: str | None = getenv("API_MAXIKASH_DEV")
 
+    URL_DATA_MAXI: str | None = getenv("URL_DATA_MAXI_DEV")
+    USRNAME_DATA_MAXI: str | None = getenv("USRNAME_DATA_MAXI_DEV")
+    PASSWORD_DATA_MAXI: str | None = getenv("PASSWORD_DATA_MAXI_DEV")
+
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE" if IS_NOT_LOCAL else "POSTGRE_IP_PUBLIC"
     PG_PORT = "POSTGRE_PORT"
@@ -55,11 +59,15 @@ class ProductionConfig(Config):
 
     API_MAXIKASH: str | None = getenv("API_MAXIKASH_PROD")
 
+    URL_DATA_MAXI: str | None = getenv("URL_DATA_MAXI_PROD")
+    USRNAME_DATA_MAXI: str | None = getenv("USRNAME_DATA_MAXI_PROD")
+    PASSWORD_DATA_MAXI: str | None = getenv("PASSWORD_DATA_MAXI_PROD")
+
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE"
     PG_PORT = "POSTGRE_PORT"
-    PG_USER = "POSTGRE_USR_RAG_REPO_DEV"
-    PG_PASSWORD = "POSTGRE_PASS_RAG_REPO_DEV"
+    PG_USER = "POSTGRE_USR_RAG_REPO_PROD"
+    PG_PASSWORD = "POSTGRE_PASS_RAG_REPO_PROD"
     PG_NAME = "POSTGRE_DB_RAG_REPO"
 
 ConfigType = Union[Type[DevelopmentConfig], Type[ProductionConfig]]
