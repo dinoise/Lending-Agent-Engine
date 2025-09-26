@@ -753,6 +753,9 @@ class OriginationTools:
                     "message": "NIP no confirmado. Confirma el NIP usando confirm_nip primero."
                 }
 
+            # Guardando plazo seleccionado
+            tool_context.state['selected_plazo'] = plazo_selected
+
             # Realizar la selección de la oferta
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/seleccionar-oferta"
             params = {
@@ -768,15 +771,13 @@ class OriginationTools:
             )
 
             selected_offer_data = response.json()
+            del selected_offer_data['imagen_ofertabase64']
 
-            # Guardar oferta seleccionada en estado
-            tool_context.state['selected_offer'] = selected_offer_data
-            tool_context.state['selected_plazo'] = plazo_selected
+            # Acá se llamará n8n
 
             return {
                 "status": "success",
                 "message": f"Oferta de {plazo_selected} semanas seleccionada exitosamente",
-                "selected_offer": selected_offer_data,
                 "plazo": plazo_selected
             }
 
