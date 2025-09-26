@@ -94,7 +94,10 @@ class VertexAgentManager:
                     "KEY_CALCULADORA_PROD",
                     "API_MAXIKASH_PROD",
                     "URL_ORIGINADOR_PROD",
-                    "KEY_ORIGINADOR_PROD"
+                    "KEY_ORIGINADOR_PROD",
+                    "URL_DATA_MAXI_PROD",
+                    "USRNAME_DATA_MAXI_PROD",
+                    "PASSWORD_DATA_MAXI_PROD"
                 ]
             else:
                 required_vars: list[str] = [
@@ -109,7 +112,10 @@ class VertexAgentManager:
                     "KEY_CALCULADORA_DEV",
                     "API_MAXIKASH_DEV",
                     "URL_ORIGINADOR_DEV",
-                    "KEY_ORIGINADOR_DEV"
+                    "KEY_ORIGINADOR_DEV",
+                    "URL_DATA_MAXI_DEV",
+                    "USRNAME_DATA_MAXI_DEV",
+                    "PASSWORD_DATA_MAXI_DEV"
                 ]
             
             for var_name in required_vars:

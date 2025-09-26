@@ -55,6 +55,10 @@ jobs:
           URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
           KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
           API_MAXIKASH_PROD: ${{ secrets.API_MAXIKASH_PROD }}
+          URL_DATA_MAXI_PROD: ${{ secrets.URL_DATA_MAXI_PROD }}
+          USRNAME_DATA_MAXI_PROD: ${{ secrets.USRNAME_DATA_MAXI_PROD }}
+          PASSWORD_DATA_MAXI_PROD: ${{ secrets.PASSWORD_DATA_MAXI_PROD }}
+
         run: |
           echo "🚀 Iniciando despliegue en producción..."
           echo "🔧 Variables de entorno configuradas"
@@ -76,6 +80,10 @@ jobs:
           URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
           KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
           API_MAXIKASH_DEV: ${{ secrets.API_MAXIKASH_DEV }}
+          URL_DATA_MAXI_DEV: ${{ secrets.URL_DATA_MAXI_DEV }}
+          USRNAME_DATA_MAXI_DEV: ${{ secrets.USRNAME_DATA_MAXI_DEV }}
+          PASSWORD_DATA_MAXI_DEV: ${{ secrets.PASSWORD_DATA_MAXI_DEV }}
+
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."
           echo "🔧 Variables de entorno configuradas"
