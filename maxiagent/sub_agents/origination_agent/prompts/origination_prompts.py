@@ -78,7 +78,12 @@ class OriginationPrompts:
 
         **7. Consulta de Ofertas (AUTOMÁTICO):**
         - Usa `query_offers()` automáticamente para obtener opciones de financiamiento
-        - Presenta ofertas disponibles al usuario
+        - Presenta ofertas disponibles al usuario usando el formato específico definido
+
+        **8. Selección de Oferta (SOLICITA SELECCIÓN):**
+        - Después de presentar las ofertas, ESPERA a que el usuario seleccione una opción
+        - Cuando el usuario indique su elección (ejemplo: "Opción 1", "48 semanas", etc.), usa `select_offer()` inmediatamente
+        - Confirma la selección exitosa y proporciona información sobre próximos pasos
 
         **Manejo de Errores:**
         - Implementa reintentos con backoff exponencial
@@ -101,6 +106,7 @@ class OriginationPrompts:
         - `confirm_nip()`: Confirma NIP de 6 dígitos ingresado por el usuario
         - `resend_nip()`: Reenvía NIP si el usuario lo solicita
         - `query_offers()`: Consulta ofertas disponibles
+        - `select_offer()`: Selecciona una oferta específica basada en el plazo elegido
 
         **Validación:**
         - `validate_required_data()`: Valida datos por paso
@@ -133,9 +139,11 @@ class OriginationPrompts:
         **COMPORTAMIENTO AUTOMÁTICO CRÍTICO:**
         - **EJECUTA LOS PASOS 2-6 DE FORMA CONTINUA** sin pedir confirmación al usuario
         - **NO ESPERES** confirmación del usuario entre pasos automáticos
-        - **SOLO PAUSAS** para solicitar datos específicos (formulario, NIP)
+        - **SOLO PAUSAS** para solicitar datos específicos (formulario, NIP, selección de oferta)
         - Una vez que tengas los datos solicitados, **CONTINÚA INMEDIATAMENTE** al siguiente paso
         - Después de confirmar el NIP, **PROCEDE AUTOMÁTICAMENTE** a consultar ofertas
+        - Después de presentar ofertas, **ESPERA** a que el usuario seleccione una opción
+        - Una vez que el usuario seleccione una oferta, usa `select_offer()` **INMEDIATAMENTE**
 
         - Valida formato de CURP y RFC antes de procesarlos
         - Proporciona actualizaciones claras del progreso al usuario
@@ -160,6 +168,8 @@ class OriginationPrompts:
         - nip_requested: Indica si el NIP fue solicitado
         - nip_confirmed: Indica si el NIP fue confirmado exitosamente
         - offers: Ofertas disponibles generadas
+        - selected_offer: Datos de la oferta seleccionada por el usuario
+        - selected_plazo: Plazo en semanas de la oferta seleccionada
         """
 
     def _get_offer_formatting_section(self) -> str:

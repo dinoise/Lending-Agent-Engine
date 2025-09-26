@@ -46,7 +46,8 @@ class OriginationTools:
                 'send_nip': self.send_nip,
                 'confirm_nip': self.confirm_nip,
                 'resend_nip': self.resend_nip,
-                'query_offers': self.query_offers
+                'query_offers': self.query_offers,
+                'select_offer': self.select_offer
             },
             'validation_tools': {
                 'validate_required_data': self.validate_required_data,
@@ -685,6 +686,109 @@ class OriginationTools:
             }
         except Exception as e:
             error_msg = f"Error inesperado consultando ofertas: {e}"
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
+
+    async def select_offer(self, tool_context: ToolContext, plazo_selected: str) -> dict:
+        """
+        Selecciona una oferta de financiamiento específica basada en el plazo elegido.
+
+        Args:
+            plazo_selected: Plazo en semanas de la oferta seleccionada
+
+        Returns:
+            Dict con resultado de la selección de oferta
+        """
+        try:
+            # Validar parámetro de entrada
+            if not plazo_selected:
+                return {
+                    "status": "error",
+                    "message": "Plazo de la oferta es requerido para la selección"
+                }
+
+            # Validar que el plazo sea numérico
+            try:
+                plazo_int = int(plazo_selected)
+                if plazo_int <= 0:
+                    raise ValueError("Plazo debe ser mayor a 0")
+            except ValueError:
+                return {
+                    "status": "error",
+                    "message": "Plazo debe ser un número válido de semanas"
+                }
+
+            # Verificar estado del flujo
+            flow_uuid = tool_context.state.get('flow_uuid')
+            if not flow_uuid:
+                return {
+                    "status": "error",
+                    "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
+                }
+
+            # Verificar que se hayan consultado ofertas previamente
+            offers = tool_context.state.get('offers')
+            if not offers:
+                return {
+                    "status": "error",
+                    "message": "No hay ofertas disponibles. Consulta ofertas usando query_offers primero."
+                }
+
+            # Verificar que el plazo seleccionado existe en las ofertas disponibles
+            available_plazos = [str(offer.get('plazo', '')) for offer in offers if offer.get('plazo')]
+            if plazo_selected not in available_plazos:
+                return {
+                    "status": "error",
+                    "message": f"Plazo '{plazo_selected}' no está disponible en las ofertas consultadas. Plazos disponibles: {', '.join(available_plazos)}"
+                }
+
+            # Verificar que el NIP haya sido confirmado
+            nip_confirmed = tool_context.state.get('nip_confirmed', False)
+            if not nip_confirmed:
+                return {
+                    "status": "error",
+                    "message": "NIP no confirmado. Confirma el NIP usando confirm_nip primero."
+                }
+
+            # Realizar la selección de la oferta
+            api_url = f"{current_config.URL_ORIGINADOR}/originacion/seleccionar-oferta"
+            params = {
+                "uuidFlujo": flow_uuid,
+                "plazo": plazo_selected
+            }
+
+            response: requests.Response = await self._call_originador_api(
+                api_url,
+                method='GET',
+                params=params,
+                timeout=45
+            )
+
+            selected_offer_data = response.json()
+
+            # Guardar oferta seleccionada en estado
+            tool_context.state['selected_offer'] = selected_offer_data
+            tool_context.state['selected_plazo'] = plazo_selected
+
+            return {
+                "status": "success",
+                "message": f"Oferta de {plazo_selected} semanas seleccionada exitosamente",
+                "selected_offer": selected_offer_data,
+                "plazo": plazo_selected
+            }
+
+        except requests.RequestException as e:
+            error_msg = self._handle_request_exception(e, "seleccionar oferta")
+            print(error_msg)
+            return {
+                "status": "error",
+                "message": error_msg
+            }
+        except Exception as e:
+            error_msg = f"Error inesperado seleccionando oferta: {e}"
             print(error_msg)
             return {
                 "status": "error",
