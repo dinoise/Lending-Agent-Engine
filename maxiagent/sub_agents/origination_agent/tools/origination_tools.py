@@ -2,7 +2,7 @@ import re
 import asyncio
 import requests
 
-from typing import List, Callable, Dict, Any, Literal
+from typing import List, Callable, Dict
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
@@ -741,8 +741,8 @@ class OriginationTools:
         self,
         url: str,
         method: str = 'POST',
-        params: dict = None,
-        json_data: dict = None,
+        params: dict = {},
+        json_data: dict = {},
         timeout: int = 30
     ) -> requests.Response:
         """
