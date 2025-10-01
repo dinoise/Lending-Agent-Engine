@@ -54,6 +54,8 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
           KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
+          URL_ORIGINADOR_PROD: ${{ secrets.URL_ORIGINADOR_PROD }}
+          KEY_ORIGINADOR_PROD: ${{ secrets.KEY_ORIGINADOR_PROD }}
           API_MAXIKASH_PROD: ${{ secrets.API_MAXIKASH_PROD }}
           URL_DATA_MAXI_PROD: ${{ secrets.URL_DATA_MAXI_PROD }}
           USRNAME_DATA_MAXI_PROD: ${{ secrets.USRNAME_DATA_MAXI_PROD }}
@@ -79,6 +81,8 @@ jobs:
           ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
           URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
           KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
+          URL_ORIGINADOR_DEV: ${{ secrets.URL_ORIGINADOR_DEV }}
+          KEY_ORIGINADOR_DEV: ${{ secrets.KEY_ORIGINADOR_DEV }}
           API_MAXIKASH_DEV: ${{ secrets.API_MAXIKASH_DEV }}
           URL_DATA_MAXI_DEV: ${{ secrets.URL_DATA_MAXI_DEV }}
           USRNAME_DATA_MAXI_DEV: ${{ secrets.USRNAME_DATA_MAXI_DEV }}
