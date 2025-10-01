@@ -35,16 +35,19 @@ class VertexAgentManager:
     """Manejador para operaciones de Agent Engines en Vertex AI"""
     
     # Paquetes requeridos estándar
+    # Nota: Sin especificar versión usa la última disponible
+    # Para versiones específicas usar formato: "package>=1.0.0" o "package==1.0.0"
     BASE_REQUIREMENTS: list[str] = [
-        "google-cloud-aiplatform[adk,agent-engines]",
-        "google-adk",
-        "python-dotenv",
-        "google-auth",
-        "tqdm",
-        "requests",
-        "deprecated",
-        "llama_index",
-        "langchain-google-vertexai"
+        "google-cloud-aiplatform[adk,agent_engines]>=1.118.0",  # Última versión con extras para Agent Engine
+        "google-adk",  # Última versión disponible
+        "python-dotenv",  # Para manejo de variables de entorno
+        "google-auth",  # Autenticación de Google Cloud
+        "tqdm",  # Barras de progreso
+        "requests",  # Cliente HTTP
+        "deprecated",  # Decoradores de deprecación
+        "llama_index",  # Framework de LLM
+        "langchain-google-vertexai",  # Integración LangChain-Vertex
+        "beautifulsoup4",  # Parser HTML (usado en get_page_content)
     ]
     
     def __init__(self, config: AgentConfig) -> None:
