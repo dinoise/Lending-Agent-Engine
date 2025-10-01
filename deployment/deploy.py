@@ -44,11 +44,7 @@ class VertexAgentManager:
         "requests",
         "deprecated",
         "llama_index",
-        "langchain-google-vertexai",
-        "pgvector",
-        "SQLAlchemy",
-        "psycopg2-binary",
-        "marshmallow_sqlalchemy"
+        "langchain-google-vertexai"
     ]
     
     def __init__(self, config: AgentConfig) -> None:
@@ -121,11 +117,23 @@ class VertexAgentManager:
             for var_name in required_vars:
                 if var_name in os.environ:
                     env_dict[var_name] = os.environ[var_name]
+                    logger.debug(f"✓ Loaded env var: {var_name}")
                 else:
-                    logger.warning(f"Variable de entorno requerida no encontrada: {var_name}")
-                    
-        logger.info(f"ENV VARS {env_dict}.")
-        logger.info(f"Len of ENV VARS {len(env_dict)}")
+                    logger.warning(f"⚠️  Variable de entorno requerida no encontrada: {var_name}")
+
+        logger.info(f"📦 ENV VARS loaded: {list(env_dict.keys())}")
+        logger.info(f"📦 Total ENV VARS: {len(env_dict)}/{len(required_vars)}")
+
+        # Validación crítica
+        if len(env_dict) < len(required_vars):
+            missing = set(required_vars) - set(env_dict.keys())
+            logger.error(f"❌ Missing {len(missing)} required env vars: {missing}")
+
+        # Log de validación de variables críticas
+        critical_vars = ['ENV', 'ROOT_AGENT_MODEL', 'GOOGLE_CLOUD_PROJECT']
+        for var in critical_vars:
+            if var in env_dict:
+                logger.info(f"✓ Critical var '{var}' = '{env_dict[var][:50]}...' " if len(env_dict[var]) > 50 else f"✓ Critical var '{var}' = '{env_dict[var]}'")
         return env_dict
     
     def _create_adk_app(self) -> AdkApp:

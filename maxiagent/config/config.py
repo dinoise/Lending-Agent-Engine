@@ -1,8 +1,9 @@
 from os import getenv
-from dotenv import load_dotenv
 from typing import Type, Union
+import logging
 
-load_dotenv()
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 class Config:
     """Configuraciones comunes"""
@@ -81,3 +82,28 @@ config_by_name: dict[str, ConfigType] = {
 # Uso con tipo definido
 config_name: str | None = getenv("ENV")
 current_config: ConfigType = config_by_name[config_name if config_name is not None else 'dev']
+
+# Logging de configuración para debugging
+logger.info(f"🔧 Config loaded: ENV={config_name or 'dev (default)'}")
+logger.info(f"🔧 Config type: {current_config.__name__}")
+logger.info(f"🔧 PROJECT_ID: {current_config.PROJECT_ID}")
+logger.info(f"🔧 ROOT_AGENT_MODEL: {current_config.ROOT_AGENT_MODEL}")
+
+# Validar configuraciones críticas
+critical_configs = {
+    'PROJECT_ID': current_config.PROJECT_ID,
+    'LOCATION': current_config.LOCATION,
+    'ROOT_AGENT_MODEL': current_config.ROOT_AGENT_MODEL,
+}
+
+missing_configs = [key for key, value in critical_configs.items() if not value]
+if missing_configs:
+    logger.warning(f"⚠️  Missing critical configurations: {', '.join(missing_configs)}")
+
+# Logging específico por ambiente
+if config_name == 'dev' or not config_name:
+    logger.info(f"🔧 Dev Config - URL_CALCULADORA: {current_config.URL_CALCULADORA}")
+    logger.info(f"🔧 Dev Config - URL_ORIGINADOR: {current_config.URL_ORIGINADOR}")
+elif config_name == 'prod':
+    logger.info(f"🔧 Prod Config - URL_CALCULADORA: {current_config.URL_CALCULADORA}")
+    logger.info(f"🔧 Prod Config - URL_ORIGINADOR: {current_config.URL_ORIGINADOR}")
