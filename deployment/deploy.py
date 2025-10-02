@@ -199,7 +199,7 @@ class VertexAgentManager:
         )
 
         logger.info(f"✅ Agent actualizado exitosamente: {resource_id}")
-        return remote_app.resource_name
+        return remote_app.api_resource.name
     
     def delete_agent(self, resource_id: str) -> None:
         """Elimina un agente usando la nueva API basada en cliente"""
