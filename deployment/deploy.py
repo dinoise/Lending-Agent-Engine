@@ -174,9 +174,10 @@ class VertexAgentManager:
             }
         )
 
-        logger.info(f"✅ Agent creado exitosamente: {remote_app.resource_name}")
+        remote_name = remote_app.api_resource.name
+        logger.info(f"✅ Agent creado exitosamente: {remote_name}")
         # self._update_env_file(remote_app.resource_name)
-        return remote_app.resource_name
+        return remote_name
     
     def update_agent(self, resource_id: str) -> str:
         """Actualiza un agente existente usando la nueva API basada en cliente"""
