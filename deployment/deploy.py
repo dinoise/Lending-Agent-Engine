@@ -183,24 +183,31 @@ class VertexAgentManager:
     
     def update_agent(self, resource_id: str) -> str:
         """Actualiza un agente existente usando la nueva API basada en cliente"""
-        app = self._create_adk_app()
+        app: AdkApp = self._create_adk_app()
 
-        logger.info(f"🔄 Updating agent: {resource_id}")
+        # Construir el nombre completo del recurso si solo se proporciona el ID
+        if not resource_id.startswith("projects/"):
+            resource_name: str = f"projects/{self.config.project}/locations/{self.config.location}/reasoningEngines/{resource_id}"
+        else:
+            resource_name: str = resource_id
 
+        logger.info(f"🔄 Updating agent: {resource_name}")
+
+        # Nota: staging_bucket, min_instances, max_instances NO son parámetros válidos en update
         remote_app = self.client.agent_engines.update(
-            resource_name=resource_id,
+            name=resource_name,
             agent=app,
             config={
                 "staging_bucket": self.config.staging_bucket,
                 "env_vars": self.env_vars,
                 "requirements": self.BASE_REQUIREMENTS,
                 "extra_packages": ["./maxiagent"],
-                "min_instances": 1,  # Mantener instancia caliente
-                "max_instances": 10,  # Auto-scaling
+                "min_instances": 1,
+                "max_instances": 10
             }
         )
 
-        logger.info(f"✅ Agent actualizado exitosamente: {resource_id}")
+        logger.info(f"✅ Agent actualizado exitosamente: {resource_name}")
         return remote_app.api_resource.name
     
     def delete_agent(self, resource_id: str) -> None:
