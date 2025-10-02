@@ -23,6 +23,7 @@ class Config:
 
     EMBEDDING_MODEL_NAME: str | None = getenv("EMBEDDING_MODEL_NAME")
 
+    ADK_ARTIFACT_BUCKET: str | None = getenv("ADK_ARTIFACT_BUCKET")
 
 class DevelopmentConfig(Config):
     """Configurations for development"""
