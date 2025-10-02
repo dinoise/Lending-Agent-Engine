@@ -42,21 +42,15 @@ class OriginationTools:
 
     def __init__(self):
         self._tools = {
+            'chained_tools': {
+                'process_ine_complete': self.process_ine_complete,
+                'complete_form_and_nip': self.complete_form_and_nip,
+                'confirm_nip_and_get_offers': self.confirm_nip_and_get_offers
+            },
             'quotation_flow': {
                 'initialize_flow': self.initialize_flow,
-                'process_ine_documents': self.process_ine_documents,
-                'verify_ine_processing': self.verify_ine_processing,
-                'validate_curp': self.validate_curp,
-                'submit_form_data': self.submit_form_data,
-                'send_nip': self.send_nip,
-                'confirm_nip': self.confirm_nip,
                 'resend_nip': self.resend_nip,
-                'query_offers': self.query_offers,
                 'select_offer': self.select_offer
-            },
-            'validation_tools': {
-                'validate_required_data': self.validate_required_data,
-                'validate_rfc_format': self.validate_rfc_format
             }
         }
 
@@ -78,7 +72,183 @@ class OriginationTools:
                 return category[tool_name]
         raise ValueError(f"Herramienta '{tool_name}' no encontrada")
 
-    # === New Quotation Flow Methods ===
+    # === Chained Tools (Auto-execute multiple steps) ===
+
+    async def process_ine_complete(self, tool_context: ToolContext) -> dict:
+        """
+        TOOL ENCADENADA: Ejecuta automáticamente los pasos 3-4 después del análisis de imágenes.
+
+        Pasos que ejecuta:
+        1. process_ine_documents() - Envía imágenes al API
+        2. verify_ine_processing() - Verifica y obtiene datos del INE
+        3. validate_curp() - Valida el CURP
+
+        Returns:
+            Dict con resultado final del proceso completo
+        """
+        logger.info("🔗 Iniciando proceso completo de INE (pasos 3-4)")
+
+        try:
+            # Paso 3a: Procesar documentos INE
+            logger.info("📤 Paso 3a: Procesando documentos INE...")
+            process_result = await self._process_ine_documents(tool_context)
+
+            if process_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "process_ine_documents",
+                    "message": f"Fallo en procesamiento INE: {process_result.get('message')}"
+                }
+
+            # Paso 3b: Verificar procesamiento
+            logger.info("🔍 Paso 3b: Verificando procesamiento INE...")
+            verify_result = await self._verify_ine_processing(tool_context)
+
+            if verify_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "verify_ine_processing",
+                    "message": f"Fallo en verificación INE: {verify_result.get('message')}"
+                }
+
+            # Paso 4: Validar CURP
+            logger.info("✅ Paso 4: Validando CURP...")
+            curp_result = await self._validate_curp(tool_context)
+
+            if curp_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "validate_curp",
+                    "message": f"Fallo en validación CURP: {curp_result.get('message')}"
+                }
+
+            logger.info("✨ Proceso completo de INE finalizado exitosamente")
+
+            return {
+                "status": "success",
+                "message": "Datos del INE procesados y CURP validado exitosamente",
+                "user_data": tool_context.state.get('user_data', {}),
+                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, precio de la moto, marca y modelo."
+            }
+
+        except Exception as e:
+            logger.error(f"Error en proceso completo de INE: {e}")
+            return {
+                "status": "error",
+                "message": f"Error inesperado en proceso de INE: {str(e)}"
+            }
+
+    async def complete_form_and_nip(self, tool_context: ToolContext, additional_data: dict) -> dict:
+        """
+        TOOL ENCADENADA: Ejecuta automáticamente los pasos 5-6 (formulario + NIP).
+
+        Pasos que ejecuta:
+        1. submit_form_data() - Envía formulario con datos adicionales
+        2. send_nip() - Solicita envío de NIP automáticamente
+
+        Args:
+            additional_data: Dict con {celular, email, precioMoto, marcaMoto, modeloMoto}
+
+        Returns:
+            Dict con resultado y mensaje para solicitar NIP al usuario
+        """
+        logger.info("🔗 Iniciando proceso de formulario + solicitud NIP (pasos 5-6)")
+
+        try:
+            # Paso 5: Enviar formulario
+            logger.info("📝 Paso 5: Enviando formulario...")
+            form_result = await self._submit_form_data(tool_context, additional_data)
+
+            if form_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "submit_form_data",
+                    "message": f"Fallo en envío de formulario: {form_result.get('message')}"
+                }
+
+            # Paso 6: Solicitar NIP automáticamente
+            logger.info("📱 Paso 6: Solicitando envío de NIP...")
+            nip_result = await self._send_nip(tool_context)
+
+            if nip_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "send_nip",
+                    "message": f"Fallo en solicitud de NIP: {nip_result.get('message')}"
+                }
+
+            logger.info("✨ Formulario enviado y NIP solicitado exitosamente")
+
+            return {
+                "status": "success",
+                "message": "✅ Formulario enviado exitosamente\n\n📱 He solicitado el envío de un NIP de 6 dígitos a tu celular.\n\n⏱️ Por favor, revisa tu teléfono y proporciónameEL NIP cuando lo recibas.",
+                "next_step": "Esperando NIP del usuario"
+            }
+
+        except Exception as e:
+            logger.error(f"Error en proceso de formulario + NIP: {e}")
+            return {
+                "status": "error",
+                "message": f"Error inesperado: {str(e)}"
+            }
+
+    async def confirm_nip_and_get_offers(self, tool_context: ToolContext, nip: str) -> dict:
+        """
+        TOOL ENCADENADA: Ejecuta automáticamente los pasos 7-8 (confirmar NIP + consultar ofertas).
+
+        Pasos que ejecuta:
+        1. confirm_nip() - Confirma el NIP de 6 dígitos
+        2. query_offers() - Consulta ofertas automáticamente
+
+        Args:
+            nip: NIP de 6 dígitos proporcionado por el usuario
+
+        Returns:
+            Dict con ofertas disponibles formateadas
+        """
+        logger.info("🔗 Iniciando confirmación NIP + consulta de ofertas (pasos 7-8)")
+
+        try:
+            # Paso 7: Confirmar NIP
+            logger.info("🔐 Paso 7: Confirmando NIP...")
+            nip_result = await self._confirm_nip(tool_context, nip)
+
+            if nip_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "confirm_nip",
+                    "message": f"Fallo en confirmación de NIP: {nip_result.get('message')}"
+                }
+
+            # Paso 8: Consultar ofertas automáticamente
+            logger.info("💰 Paso 8: Consultando ofertas...")
+            offers_result = await self._query_offers(tool_context)
+
+            if offers_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "query_offers",
+                    "message": f"Fallo en consulta de ofertas: {offers_result.get('message')}"
+                }
+
+            logger.info("✨ NIP confirmado y ofertas consultadas exitosamente")
+
+            return {
+                "status": "success",
+                "message": "✅ NIP confirmado exitosamente",
+                "offers": offers_result.get('offers', []),
+                "offers_count": offers_result.get('offers_count', 0),
+                "next_step": "Presenta las ofertas al usuario usando el formato obligatorio"
+            }
+
+        except Exception as e:
+            logger.error(f"Error en confirmación NIP + ofertas: {e}")
+            return {
+                "status": "error",
+                "message": f"Error inesperado: {str(e)}"
+            }
+
+    # === Quotation Flow Methods ===
 
     async def initialize_flow(self, tool_context: ToolContext) -> dict:
         """
@@ -121,7 +291,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def process_ine_documents(self, tool_context: ToolContext) -> dict:
+    async def _process_ine_documents(self, tool_context: ToolContext) -> dict:
         """
         Procesa las imágenes INE (frente y reverso) enviándolas al API.
 
@@ -182,7 +352,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def verify_ine_processing(self, tool_context: ToolContext, max_retries: int = 10) -> dict:
+    async def _verify_ine_processing(self, tool_context: ToolContext, max_retries: int = 10) -> dict:
         """
         Verifica el estado del procesamiento INE con reintentos.
         Args:
@@ -252,7 +422,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def validate_curp(self, tool_context: ToolContext) -> dict:
+    async def _validate_curp(self, tool_context: ToolContext) -> dict:
         """
         Valida CURP contra lista negra y ofertas activas.
 
@@ -331,7 +501,7 @@ class OriginationTools:
                 "message": f"Error durante validación: {str(e)}"
             }
 
-    async def submit_form_data(self, tool_context: ToolContext, additional_data: dict) -> dict:
+    async def _submit_form_data(self, tool_context: ToolContext, additional_data: dict) -> dict:
         """
         Envía los datos del formulario completo al API.
 
@@ -451,7 +621,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def send_nip(self, tool_context: ToolContext) -> dict:
+    async def _send_nip(self, tool_context: ToolContext) -> dict:
         """
         Solicita el envío de un NIP al usuario.
 
@@ -507,7 +677,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def confirm_nip(self, tool_context: ToolContext, nip: str) -> dict:
+    async def _confirm_nip(self, tool_context: ToolContext, nip: str) -> dict:
         """
         Confirma el NIP ingresado por el usuario.
 
@@ -629,7 +799,7 @@ class OriginationTools:
                 "message": error_msg
             }
 
-    async def query_offers(self, tool_context: ToolContext) -> dict:
+    async def _query_offers(self, tool_context: ToolContext) -> dict:
         """
         Consulta ofertas de financiamiento disponibles.
 

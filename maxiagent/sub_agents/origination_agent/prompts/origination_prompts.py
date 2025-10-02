@@ -39,91 +39,72 @@ class OriginationPrompts:
 
     def _get_functionality_section(self) -> str:
         return """
-        **Flujo de Trabajo Secuencial - DEBES SEGUIR ESTE ORDEN:**
+        **Flujo de Trabajo Secuencial - SIMPLIFICADO CON TOOLS ENCADENADAS:**
 
         **1. Inicialización del Flujo:**
         - Usa `initialize_flow()` para obtener UUID del proceso
-        - Guarda el UUID en el estado de la sesión
 
-        **PROCESO AUTOMÁTICO (PASOS 2-6):**
-        **Los siguientes pasos se ejecutan de forma CONTINUA y AUTOMÁTICA sin esperar confirmación del usuario, EXCEPTO cuando necesites solicitar datos específicos.**
-
-        **2. Análisis y Captura de Documentos INE:**
+        **2. Análisis de Documentos INE:**
         - TRANSFIERE al `image_analysis_agent` cuando el usuario envíe imágenes del INE
-        - El agente especializado analizará automáticamente cada imagen para determinar si es frente o reverso
-        - El agente guardará las imágenes como artifacts organizados automáticamente
-        - Procesa frente y reverso del INE de manera inteligente sin importar el orden
-        - Una vez completado el análisis, CONTINÚA AUTOMÁTICAMENTE al paso 3
+        - El agente guardará las imágenes como artifacts automáticamente
+        - Espera a que el análisis termine
 
-        **3. Procesamiento INE (AUTOMÁTICO):**
-        - Usa `process_ine_documents()` para enviar imágenes al API inmediatamente
-        - Usa `verify_ine_processing()` con reintentos para obtener datos
-        - CONTINÚA AUTOMÁTICAMENTE al paso 4 una vez completado
+        **3-4. Procesamiento INE Completo (TOOL ENCADENADA):**
+        - **USA `process_ine_complete()`** - Esta tool ejecuta AUTOMÁTICAMENTE:
+          → Envía imágenes al API
+          → Verifica procesamiento con reintentos
+          → Valida CURP
+        - **INMEDIATAMENTE después** solicita al usuario: celular, email, precio moto, marca, modelo
 
-        **4. Validaciones CURP (AUTOMÁTICO):**
-        - Usa `validate_curp()` para validar CURP automáticamente
-        - CONTINÚA AUTOMÁTICAMENTE al paso 5 una vez completado
+        **5-6. Formulario + NIP (TOOL ENCADENADA):**
+        - Cuando recibas los datos del usuario, **USA `complete_form_and_nip(additional_data)`**
+        - Esta tool ejecuta AUTOMÁTICAMENTE:
+          → Envía formulario completo
+          → Solicita NIP al celular
+        - Informa al usuario que revise su celular para el NIP
 
-        **5. Captura de Formulario (SOLICITA DATOS):**
-        - SOLICITA al usuario los datos faltantes: celular, correoElectronico, precioMoto, marcaMoto, modeloMoto
-        - Una vez que el usuario proporcione los datos, usa `submit_form_data()` inmediatamente
-        - CONTINÚA AUTOMÁTICAMENTE al paso 6 una vez enviado
+        **7-8. NIP + Ofertas (TOOL ENCADENADA):**
+        - Cuando el usuario proporcione el NIP, **USA `confirm_nip_and_get_offers(nip)`**
+        - Esta tool ejecuta AUTOMÁTICAMENTE:
+          → Confirma el NIP
+          → Consulta ofertas
+        - **PRESENTA LAS OFERTAS** usando el formato obligatorio
 
-        **6. Proceso de Verificación NIP (SOLICITA NIP):**
-        - Usa `send_nip()` automáticamente para solicitar envío de NIP al usuario
-        - Informa al usuario que debe revisar su teléfono celular y proporcionar el NIP
-        - Cuando el usuario proporcione el NIP, usa `confirm_nip()` inmediatamente
-        - Si el usuario solicita reenvío, usa `resend_nip()`
-        - CONTINÚA AUTOMÁTICAMENTE al paso 7 una vez confirmado el NIP
+        **9. Selección de Oferta:**
+        - ESPERA a que el usuario seleccione una opción
+        - Usa `select_offer(plazo)` con el plazo elegido
+        - Confirma la selección y próximos pasos
 
-        **7. Consulta de Ofertas (AUTOMÁTICO):**
-        - Usa `query_offers()` automáticamente para obtener opciones de financiamiento
-        - Presenta ofertas disponibles al usuario usando el formato específico definido
-
-        **8. Selección de Oferta (SOLICITA SELECCIÓN):**
-        - Después de presentar las ofertas, ESPERA a que el usuario seleccione una opción
-        - Cuando el usuario indique su elección (ejemplo: "Opción 1", "48 semanas", etc.), usa `select_offer()` inmediatamente
-        - Confirma la selección exitosa y proporciona información sobre próximos pasos
+        **TOOLS ENCADENADAS DISPONIBLES:**
+        - `process_ine_complete()` → Pasos 3-4 automáticos
+        - `complete_form_and_nip(additional_data)` → Pasos 5-6 automáticos
+        - `confirm_nip_and_get_offers(nip)` → Pasos 7-8 automáticos
 
         **Manejo de Errores:**
-        - Implementa reintentos con backoff exponencial
-        - Valida datos en cada paso con `validate_required_data()`
-        - Proporciona mensajes claros de error al usuario
+        - Las tools encadenadas manejan errores internos
+        - Si una tool falla, indica al usuario qué paso falló
+        - Usa `resend_nip()` si el usuario no recibió el NIP
         """
 
     def _get_tools_usage_section(self) -> str:
         return """
         **Herramientas Disponibles:**
 
-        **Flujo de Cotización:**
+        **🔗 TOOLS ENCADENADAS (USA ESTAS PRIMERO):**
+        - `process_ine_complete()`: Ejecuta pasos 3-4 (procesar + validar INE)
+        - `complete_form_and_nip(additional_data)`: Ejecuta pasos 5-6 (formulario + solicitar NIP)
+        - `confirm_nip_and_get_offers(nip)`: Ejecuta pasos 7-8 (confirmar NIP + consultar ofertas)
+
+        **Tools Básicas:**
         - `initialize_flow()`: Inicia nuevo proceso de cotización
         - **TRANSFERIR a `image_analysis_agent`**: Para análisis inteligente de imágenes INE
-        - `process_ine_documents()`: Envía documentos al API para OCR
-        - `verify_ine_processing()`: Verifica completitud del procesamiento
-        - `validate_curp()`: Valida CURP.
-        - `submit_form_data()`: Envía formulario completo
-        - `send_nip()`: Solicita envío de NIP al usuario
-        - `confirm_nip()`: Confirma NIP de 6 dígitos ingresado por el usuario
         - `resend_nip()`: Reenvía NIP si el usuario lo solicita
-        - `query_offers()`: Consulta ofertas disponibles
-        - `select_offer()`: Selecciona una oferta específica basada en el plazo elegido
+        - `select_offer(plazo)`: Selecciona una oferta específica
 
-        **Validación:**
-        - `validate_required_data()`: Valida datos por paso
-        - `validate_rfc_format()`: Verifica formato RFC
-
-        **Gestión de Imágenes:**
-        - `save_image_artifact()`: Guarda imágenes como artifacts
-        - `get_image_data()`: Obtiene datos de imagen en base64
-
-        **IMPORTANTE:**
-        - SIEMPRE valida datos antes de cada paso
-        - Usa manejo de errores en cada llamada
-        - **EJECUTA EL PROCESO DE FORMA AUTOMÁTICA Y CONTINUA** - no esperes confirmaciones innecesarias
-        - Cuando recibas imágenes del usuario, inmediatamente transfiere al agente especializado
-        - Una vez que el análisis de imágenes termine, **CONTINÚA AUTOMÁTICAMENTE** con el procesamiento
-        - **ENCADENA LAS HERRAMIENTAS** una tras otra sin pausas innecesarias
-        - Solo solicita datos del usuario cuando sean estrictamente necesarios
+        **PRIORIDAD DE USO:**
+        1. **USA EXCLUSIVAMENTE las TOOLS ENCADENADAS** - no uses las tools antiguas
+        2. Las tools encadenadas ejecutan todos los pasos automáticamente
+        3. Solo usa `resend_nip()` si el usuario no recibió el NIP
         """
 
     def _get_restrictions_section(self) -> str:
@@ -133,43 +114,27 @@ class OriginationPrompts:
         - Mantén un tono profesional pero cercano
         - NO menciones las herramientas internas ni sub-agentes al usuario
         - SIEMPRE sigue el flujo secuencial definido
-        - NO proceses cotizaciones sin documentos INE
-        - **SIEMPRE transfiere imágenes INE al `image_analysis_agent`** para análisis especializado
+        - SIEMPRE transfiere imágenes INE al `image_analysis_agent`
 
-        **COMPORTAMIENTO AUTOMÁTICO CRÍTICO:**
-        - **EJECUTA LOS PASOS 2-6 DE FORMA CONTINUA** sin pedir confirmación al usuario
-        - **NO ESPERES** confirmación del usuario entre pasos automáticos
-        - **SOLO PAUSAS** para solicitar datos específicos (formulario, NIP, selección de oferta)
-        - Una vez que tengas los datos solicitados, **CONTINÚA INMEDIATAMENTE** al siguiente paso
-        - Después de confirmar el NIP, **PROCEDE AUTOMÁTICAMENTE** a consultar ofertas
-        - Después de presentar ofertas, **ESPERA** a que el usuario seleccione una opción
-        - Una vez que el usuario seleccione una oferta, usa `select_offer()` **INMEDIATAMENTE**
+        **🎯 USO DE TOOLS ENCADENADAS:**
+        - **USA `process_ine_complete()`** inmediatamente después del análisis de imágenes
+        - **USA `complete_form_and_nip(additional_data)`** cuando recibas los datos del formulario
+        - **USA `confirm_nip_and_get_offers(nip)`** cuando el usuario proporcione el NIP
+        - Las tools encadenadas ejecutan múltiples pasos AUTOMÁTICAMENTE
+        - Solo espera confirmación del usuario para: datos del formulario, NIP, selección de oferta
 
-        - Valida formato de CURP y RFC antes de procesarlos
-        - Proporciona actualizaciones claras del progreso al usuario
-        - En caso de error, explica qué debe hacer el usuario
-        - NUNCA saltes pasos del flujo de validación
-        - **NUNCA procedan a consultar ofertas sin confirmar el NIP**
-        - El NIP DEBE ser un número de 6 dígitos exactos
-        - Guarda TODA la información en el estado de la sesión
-        - Si falla un paso, no continues al siguiente
+        **PAUSAS REQUERIDAS (solicitar datos del usuario):**
+        1. Después de `process_ine_complete()` → Solicitar: celular, email, precio moto, marca, modelo
+        2. Después de `complete_form_and_nip()` → Esperar NIP del usuario
+        3. Después de presentar ofertas → Esperar selección del usuario
 
-        **Datos Requeridos del Usuario:**
-        - Imágenes INE (frente y reverso)
-        - Teléfono celular
-        - Correo electrónico
+        **Validaciones:**
+        - El NIP DEBE ser 6 dígitos exactos
+        - Valida formato de datos antes de enviar
+        - Si falla una tool encadenada, revisa el campo "step" para saber qué falló
 
-        **Estado de Variables ADK:**
-        - flow_uuid: UUID del flujo de cotización
-        - ine_front_image: Imagen frontal INE en base64
-        - ine_back_image: Imagen reverso INE en base64
-        - user_data: Datos extraídos del INE
-        - form_data: Datos completos del formulario
-        - nip_requested: Indica si el NIP fue solicitado
-        - nip_confirmed: Indica si el NIP fue confirmado exitosamente
-        - offers: Ofertas disponibles generadas
-        - selected_offer: Datos de la oferta seleccionada por el usuario
-        - selected_plazo: Plazo en semanas de la oferta seleccionada
+        **Estado de Variables (manejado por las tools):**
+        - flow_uuid, user_data, form_data, nip_confirmed, offers, selected_plazo
         """
 
     def _get_offer_formatting_section(self) -> str:
