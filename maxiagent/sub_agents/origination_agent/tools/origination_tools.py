@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import asyncio
+import logging
 import requests
 
 from requests.auth import HTTPBasicAuth
@@ -9,6 +10,8 @@ from typing import List, Callable, Dict
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
+
+logger = logging.getLogger(__name__)
 
 class OriginationTools:
     """Clase para gestionar las herramientas del agente de originación."""
@@ -775,7 +778,41 @@ class OriginationTools:
             selected_offer_data = response.json()
             del selected_offer_data['imagen_ofertabase64']
 
-            # Acá se llamará n8n
+            # Obtener datos del estado para enviar a n8n
+            user_data = tool_context.state.get('user_data', {})
+            form_data = tool_context.state.get('form_data', {})
+
+            curp = user_data.get('curp', '')
+            celular = form_data.get('celular', '')
+            email = form_data.get('email', '')
+
+            # Preparar payload para n8n
+            flow_payload = {
+                **selected_offer_data,
+                "curp": curp,
+                "celular": celular,
+                "email": email,
+                "flow_uuid": flow_uuid,
+                "plazo": plazo_selected
+            }
+
+            # Realizar POST a Workflows
+            try:
+                flow_url: str = f"{current_config.API_MAXIKASH}/api/trigger-workflow"
+                n8n_response: requests.Response = requests.post(
+                    url=flow_url,
+                    json=flow_payload,
+                    timeout=30
+                )
+
+                if n8n_response.status_code == 202:
+                    logger.info(f"Workflow n8n triggered successfully for CURP: {curp}")
+                else:
+                    logger.warning(f"n8n workflow returned status {n8n_response.status_code}. Response {n8n_response.json()}")
+
+            except requests.RequestException as n8n_error:
+                # No fallar si n8n falla, solo loggear
+                logger.error(f"Error triggering n8n workflow: {n8n_error}")
 
             return {
                 "status": "success",
