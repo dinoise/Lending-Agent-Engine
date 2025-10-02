@@ -3,20 +3,24 @@ import argparse
 import sys
 import os
 import logging
+from dotenv import load_dotenv, set_key, find_dotenv
 
 from typing import Dict
 from dataclasses import dataclass
-from vertexai import agent_engines
 from vertexai.preview.reasoning_engines import AdkApp
 from google.api_core import exceptions as google_exceptions
-from dotenv import set_key, find_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from maxiagent.agent import root_agent
+# ⚠️ CRÍTICO: Cargar variables de entorno ANTES de importar el agente
+# Esto asegura que current_config tenga valores cuando se inicialicen los agentes
+load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Ahora sí importar el agente (después de cargar .env)
+from maxiagent.agent import root_agent
 
 @dataclass
 class AgentConfig:
@@ -39,7 +43,7 @@ class VertexAgentManager:
     # Para versiones específicas usar formato: "package>=1.0.0" o "package==1.0.0"
     BASE_REQUIREMENTS: list[str] = [
         "google-cloud-aiplatform[adk,agent_engines]>=1.118.0",  # Última versión con extras para Agent Engine
-        "google-adk",  # Última versión disponible
+        "google-adk>=1.15.1",  # Version sin bug
         "python-dotenv",  # Para manejo de variables de entorno
         "google-auth",  # Autenticación de Google Cloud
         "tqdm",  # Barras de progreso
@@ -52,20 +56,61 @@ class VertexAgentManager:
     
     def __init__(self, config: AgentConfig) -> None:
         self.config: AgentConfig = config
-        self._initialize_vertex()
+        self.client: vertexai.Client = self._initialize_vertex_client()
         self.env_vars: Dict[str, str] = self._load_env_vars()
-        
-    def _initialize_vertex(self) -> None:
-        """Inicializa el entorno de Vertex AI"""
-        vertexai.init(
+
+    def _initialize_vertex_client(self) -> vertexai.Client:
+        """Inicializa el cliente de Vertex AI (nueva API basada en cliente)"""
+        logger.info(f"🔧 Initializing Vertex AI Client with project={self.config.project}, location={self.config.location}")
+        return vertexai.Client(
             project=self.config.project,
             location=self.config.location,
-            staging_bucket=self.config.staging_bucket,
         )
     
     def _load_env_vars(self) -> Dict[str, str]:
         """Carga variables de entorno desde archivo"""
         env_dict = {}
+
+        # Definir required_vars basado en el ambiente
+        env: str = self.config.env
+        if env == "prod":
+            required_vars: list[str] = [
+                "ENV",
+                "AGENT_ENGINE_ID",
+                "STAGING_BUCKET",
+                "RAG_CORPUS",
+                "GOOGLE_CSE_ID",
+                "GOOGLE_SEARCH_API_KEY",
+                "ROOT_AGENT_MODEL",
+                "URL_CALCULADORA_PROD",
+                "KEY_CALCULADORA_PROD",
+                "API_MAXIKASH_PROD",
+                "URL_ORIGINADOR_PROD",
+                "KEY_ORIGINADOR_PROD",
+                "URL_DATA_MAXI_PROD",
+                "USRNAME_DATA_MAXI_PROD",
+                "PASSWORD_DATA_MAXI_PROD"
+            ]
+        else:
+            required_vars: list[str] = [
+                "ENV",
+                "AGENT_ENGINE_ID",
+                "STAGING_BUCKET",
+                "RAG_CORPUS",
+                "GOOGLE_CSE_ID",
+                "GOOGLE_SEARCH_API_KEY",
+                "ROOT_AGENT_MODEL",
+                "URL_CALCULADORA_DEV",
+                "KEY_CALCULADORA_DEV",
+                "API_MAXIKASH_DEV",
+                "URL_ORIGINADOR_DEV",
+                "KEY_ORIGINADOR_DEV",
+                "URL_DATA_MAXI_DEV",
+                "USRNAME_DATA_MAXI_DEV",
+                "PASSWORD_DATA_MAXI_DEV"
+            ]
+
+        # Intentar cargar desde archivo .env
         try:
             with open(self.config.env_file_path, 'r') as file:
                 for line in file:
@@ -74,49 +119,12 @@ class VertexAgentManager:
                         key, value = line.split('=', 1)
                         if key in ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]: continue
                         env_dict[key.strip()] = value.strip().strip('"\'')
+            logger.info(f"📄 Loaded env vars from file: {self.config.env_file_path}")
         except FileNotFoundError:
-            logger.warning(f"Archivo {self.config.env_file_path} no encontrado")
-            # En GitHub Actions, usar las variables ya disponibles en os.environ
-            # pero filtrando solo las que necesitamos
-            env: str = self.config.env
+            logger.warning(f"📄 Archivo {self.config.env_file_path} no encontrado")
+            logger.info(f"📦 Loading env vars from os.environ (CI/CD mode)")
 
-            if env == "prod":
-                required_vars: list[str] = [
-                    "ENV",
-                    "AGENT_ENGINE_ID",
-                    "STAGING_BUCKET",
-                    "RAG_CORPUS",
-                    "GOOGLE_CSE_ID",
-                    "GOOGLE_SEARCH_API_KEY",
-                    "ROOT_AGENT_MODEL",
-                    "URL_CALCULADORA_PROD",
-                    "KEY_CALCULADORA_PROD",
-                    "API_MAXIKASH_PROD",
-                    "URL_ORIGINADOR_PROD",
-                    "KEY_ORIGINADOR_PROD",
-                    "URL_DATA_MAXI_PROD",
-                    "USRNAME_DATA_MAXI_PROD",
-                    "PASSWORD_DATA_MAXI_PROD"
-                ]
-            else:
-                required_vars: list[str] = [
-                    "ENV",
-                    "AGENT_ENGINE_ID",
-                    "STAGING_BUCKET",
-                    "RAG_CORPUS",
-                    "GOOGLE_CSE_ID",
-                    "GOOGLE_SEARCH_API_KEY",
-                    "ROOT_AGENT_MODEL",
-                    "URL_CALCULADORA_DEV",
-                    "KEY_CALCULADORA_DEV",
-                    "API_MAXIKASH_DEV",
-                    "URL_ORIGINADOR_DEV",
-                    "KEY_ORIGINADOR_DEV",
-                    "URL_DATA_MAXI_DEV",
-                    "USRNAME_DATA_MAXI_DEV",
-                    "PASSWORD_DATA_MAXI_DEV"
-                ]
-            
+            # En CI/CD, cargar desde os.environ
             for var_name in required_vars:
                 if var_name in os.environ:
                     env_dict[var_name] = os.environ[var_name]
@@ -148,47 +156,65 @@ class VertexAgentManager:
         )
     
     def create_agent(self, display_name: str) -> str:
-        """Crea un nuevo agente"""
+        """Crea un nuevo agente usando la nueva API basada en cliente"""
         app = self._create_adk_app()
-        
-        remote_app = agent_engines.create(
-            agent_engine=app,
-            requirements=self.BASE_REQUIREMENTS,
-            display_name=display_name,
-            env_vars=self.env_vars,
-            extra_packages=["./maxiagent"],
+
+        logger.info(f"🚀 Creating agent with display_name: {display_name}")
+
+        remote_app = self.client.agent_engines.create(
+            agent=app,
+            config={
+                "staging_bucket": self.config.staging_bucket,
+                "requirements": self.BASE_REQUIREMENTS,
+                "display_name": display_name,
+                "env_vars": self.env_vars,
+                "extra_packages": ["./maxiagent"],
+                "min_instances": 1,  # Mantener instancia caliente
+                "max_instances": 10,  # Auto-scaling
+            }
         )
-        
-        logger.info(f"Agent creado: {remote_app.resource_name}")
+
+        logger.info(f"✅ Agent creado exitosamente: {remote_app.resource_name}")
         # self._update_env_file(remote_app.resource_name)
         return remote_app.resource_name
     
     def update_agent(self, resource_id: str) -> str:
-        """Actualiza un agente existente"""
+        """Actualiza un agente existente usando la nueva API basada en cliente"""
         app = self._create_adk_app()
-        
-        remote_app = agent_engines.update(
+
+        logger.info(f"🔄 Updating agent: {resource_id}")
+
+        remote_app = self.client.agent_engines.update(
             resource_name=resource_id,
-            agent_engine=app,
-            env_vars=self.env_vars,
-            requirements=self.BASE_REQUIREMENTS,
-            extra_packages=["./maxiagent"],
+            agent=app,
+            config={
+                "staging_bucket": self.config.staging_bucket,
+                "env_vars": self.env_vars,
+                "requirements": self.BASE_REQUIREMENTS,
+                "extra_packages": ["./maxiagent"],
+                "min_instances": 1,  # Mantener instancia caliente
+                "max_instances": 10,  # Auto-scaling
+            }
         )
-        
-        logger.info(f"Agent actualizado: {resource_id}")
+
+        logger.info(f"✅ Agent actualizado exitosamente: {resource_id}")
         return remote_app.resource_name
     
     def delete_agent(self, resource_id: str) -> None:
-        """Elimina un agente"""
+        """Elimina un agente usando la nueva API basada en cliente"""
         try:
-            remote_agent = agent_engines.get(resource_id)
-            remote_agent.delete(force=True)
-            logger.info(f"Agent eliminado: {resource_id}")
+            logger.info(f"🗑️  Deleting agent: {resource_id}")
+            # En la nueva API, delete() se llama directamente con el name
+            self.client.agent_engines.delete(
+                name=resource_id,
+                force=True  # Elimina incluso si tiene sesiones o memoria asociadas
+            )
+            logger.info(f"✅ Agent eliminado exitosamente: {resource_id}")
         except google_exceptions.NotFound:
-            logger.error(f"Agent no encontrado: {resource_id}")
+            logger.error(f"❌ Agent no encontrado: {resource_id}")
             raise
         except Exception as e:
-            logger.error(f"Error eliminando agent {resource_id}: {e}")
+            logger.error(f"❌ Error eliminando agent {resource_id}: {e}")
             raise
     
     def _update_env_file(self, agent_engine_id: str) -> None:
