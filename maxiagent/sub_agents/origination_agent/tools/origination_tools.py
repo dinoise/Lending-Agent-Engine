@@ -128,7 +128,7 @@ class OriginationTools:
                 "status": "success",
                 "message": "Datos del INE procesados y CURP validado exitosamente",
                 "user_data": tool_context.state.get('user_data', {}),
-                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, precio de la moto, marca y modelo."
+                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico y precio de la moto."
             }
 
         except Exception as e:
@@ -147,7 +147,7 @@ class OriginationTools:
         2. send_nip() - Solicita envío de NIP automáticamente
 
         Args:
-            additional_data: Dict con {celular, email, precioMoto, marcaMoto, modeloMoto}
+            additional_data: Dict con {celular, correoElectronico, precioMoto}
 
         Returns:
             Dict con resultado y mensaje para solicitar NIP al usuario
@@ -571,7 +571,7 @@ class OriginationTools:
             }
 
             # Validar datos requeridos
-            required_fields: List[str] = ['celular', 'curp', 'correoElectronico', 'precioMoto', 'marcaMoto', 'modeloMoto']
+            required_fields: List[str] = ['celular', 'curp', 'correoElectronico', 'precioMoto']
             missing_fields: List[str] = [field for field in required_fields if not form_data.get(field)]
 
             # Validar datos de dirección requeridos

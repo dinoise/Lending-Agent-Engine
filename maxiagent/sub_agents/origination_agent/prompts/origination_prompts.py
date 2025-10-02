@@ -54,7 +54,7 @@ class OriginationPrompts:
           → Envía imágenes al API
           → Verifica procesamiento con reintentos
           → Valida CURP
-        - **INMEDIATAMENTE después** solicita al usuario: celular, email, precio moto, marca, modelo
+        - **INMEDIATAMENTE después** solicita al usuario: celular, email, precio de la moto
 
         **5-6. Formulario + NIP (TOOL ENCADENADA):**
         - Cuando recibas los datos del usuario, **USA `complete_form_and_nip(additional_data)`**
@@ -124,7 +124,7 @@ class OriginationPrompts:
         - Solo espera confirmación del usuario para: datos del formulario, NIP, selección de oferta
 
         **PAUSAS REQUERIDAS (solicitar datos del usuario):**
-        1. Después de `process_ine_complete()` → Solicitar: celular, email, precio moto, marca, modelo
+        1. Después de `process_ine_complete()` → Solicitar: celular, email, precio ESTIMADO de la moto
         2. Después de `complete_form_and_nip()` → Esperar NIP del usuario
         3. Después de presentar ofertas → Esperar selección del usuario
 
