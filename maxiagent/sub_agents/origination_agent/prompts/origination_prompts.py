@@ -143,53 +143,48 @@ class OriginationPrompts:
 
         Cuando recibas ofertas de `query_offers()`, SIEMPRE presenta los resultados usando el siguiente formato en markdown:
 
-        # 🏍️ **OFERTAS DE FINANCIAMIENTO DISPONIBLES**
+        ### 🏍️ Ofertas de Financiamiento
 
-        Para cada oferta, crea una tabla individual usando este formato exacto:
-
-        ## 💰 **OPCIÓN [número]**
-
-        | **Concepto**                    | **Detalle**                      |
-        |---------------------------------|----------------------------------|
-        | 🏍️ **Precio de la Moto**        | $[precioMoto] MXN               |
-        | 💵 **Enganche Requerido**       | $[enganche] MXN                 |
-        | 🏦 **Monto a Financiar**        | $[monto_financiado] MXN         |
-        | 📅 **Plazo de Pago**            | [plazo] semanas ([meses] meses) |
-        | 💳 **Pago Semanal**             | $[pago] MXN                     |
-        | 📈 **Tasa de Interés**          | [tasa_interes]%                 |
-        | 💪 **Capacidad de Pago**        | $[capacidad_pago] MXN           |
+        **Precio de la Moto:** $[precioMoto] MXN
+        **Enganche Requerido:** $[enganche] MXN
+        **Monto a Financiar:** $[monto_financiado] MXN
 
         ---
 
-        **Al final de TODAS las ofertas, agrega esta información:**
+        Para cada oferta, crea una tabla individual usando este formato exacto:
 
-        ## ℹ️ **INFORMACIÓN IMPORTANTE**
+        **Opción [número]**
 
-        - **Pagos semanales** realizados cada semana según el calendario establecido
-        - **Enganche** debe ser cubierto al momento de la compra
-        - **Capacidad de pago** es el ingreso mínimo recomendado
-        - **Sujeto a aprobación** crediticia final
+        | Plazo de Pago | Pago Semanal |
+        |---------------|--------------|
+        | [plazo] semanas | $[pago] MXN |
 
-        **¿Te interesa alguna de estas opciones?**
+        ---
 
-        **Próximos pasos disponibles:**
-        ✅ **Elegir una opción** - Solo dime cuál te conviene más (Opción 1, 2, etc.)
-        📱 **Contactar a un asesor** - Para finalizar el proceso y coordinar la entrega
-        🏍️ **Ver otras motos** - Si quieres explorar diferentes modelos
-        ❓ **Resolver dudas** - Sobre términos, condiciones o el proceso
+        **Al final de TODAS las ofertas, agrega este mensaje:**
 
-        ¡Podemos proceder con lo que más te convenga! 🚀
+        **¿Cuál opción prefieres?** Solo dime el número de la opción que más te convenga (Opción 1, 2, etc.) 🚀
+
+        **DESPUÉS DE QUE EL USUARIO SELECCIONE UNA OPCIÓN, USA `select_offer()` Y LUEGO RESPONDE:**
+
+        ✅ **¡Perfecto! Tu solicitud ha sido enviada a análisis.**
+
+        Nuestro equipo revisará tu información y se pondrá en contacto contigo pronto para continuar con el proceso.
+
+        Mientras tanto, puedo ayudarte con:
+        - Ver el catálogo de motos disponibles
+        - Resolver dudas sobre el financiamiento
+
+        ¿En qué más puedo ayudarte? 😊
 
         **MAPEO DE CAMPOS DE LA API:**
         - precioMoto → Precio de la Moto
         - enganche → Enganche Requerido
         - monto_financiado → Monto a Financiar
-        - plazo → Plazo en semanas (convertir a meses dividiendo entre 4.33)
+        - plazo → Plazo en semanas (NO convertir a meses, mostrar solo semanas)
         - pago → Pago Semanal
-        - tasa_interes → Tasa de Interés
-        - capacidad_pago → Capacidad de Pago
 
-        **FORMATEO NÚMERICO:**
+        **FORMATEO NUMÉRICO:**
         - SIEMPRE usa separadores de miles con comas (ej: $25,999)
         - SIEMPRE agrega "MXN" después de cantidades monetarias
         - Si un campo está vacío o es null, muestra "N/A"
