@@ -446,14 +446,38 @@ class ImageAnalysisTools:
                 )
             )
 
-            if not response or not response.text:
+            # Extraer correctamente el texto de la respuesta procesando todos los parts
+            if not response or not response.candidates:
                 return {
                     "status": "error",
                     "type": "unknown",
                     "message": "El modelo no proporcionó respuesta"
                 }
 
-            analysis_result = response.text.strip().upper()
+            # Acceder a los parts de la primera candidate
+            candidate = response.candidates[0]
+            if not candidate.content or not candidate.content.parts:
+                return {
+                    "status": "error",
+                    "type": "unknown",
+                    "message": "El modelo no proporcionó contenido"
+                }
+
+            # Extraer solo los text parts, ignorando thought_signature y function_call
+            text_parts = []
+            for part in candidate.content.parts:
+                if hasattr(part, 'text') and part.text:
+                    text_parts.append(part.text)
+
+            if not text_parts:
+                return {
+                    "status": "error",
+                    "type": "unknown",
+                    "message": "El modelo no proporcionó texto en la respuesta"
+                }
+
+            # Concatenar todos los text parts
+            analysis_result = " ".join(text_parts).strip().upper()
             print(f"📝 Respuesta del modelo: {analysis_result}")
 
             # Mapear respuesta a formato esperado
