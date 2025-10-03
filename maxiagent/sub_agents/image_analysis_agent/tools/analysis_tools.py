@@ -76,30 +76,46 @@ class ImageAnalysisTools:
                     "message": "No parts in the user message"
                 }
 
+            # Logging inicial de contenido recibido
+            print(f"📦 CONTENIDO TOTAL: {len(user_content_parts)} parts recibidos")
+
+            # Filtrar solo imágenes válidas con sus índices originales
+            image_parts = []
+            for idx, part in enumerate(user_content_parts):
+                if not part:
+                    continue
+                if not hasattr(part, 'inline_data') or not part.inline_data:
+                    continue
+                if not hasattr(part.inline_data, 'mime_type') or not part.inline_data.mime_type:
+                    continue
+                if not part.inline_data.mime_type.startswith('image/'):
+                    continue
+                if not hasattr(part.inline_data, 'data') or not part.inline_data.data:
+                    continue
+                image_parts.append((idx, part))
+
+            print(f"🖼️  IMÁGENES DETECTADAS: {len(image_parts)} en índices {[idx for idx, _ in image_parts]}")
+
+            if len(image_parts) == 0:
+                print(f"⚠️  NO SE ENCONTRARON IMÁGENES EN EL CONTENIDO")
+                return {
+                    "status": "error",
+                    "message": "No se encontraron imágenes en el mensaje"
+                }
+
             analyzed_images = []
 
-            for idx, image_part in enumerate(user_content_parts[:2]):  # Máximo 2 imágenes
-                if not image_part: 
-                    print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la lista de imagenes")
-                    continue
-                
-                inline_data: types.Blob | None = image_part.inline_data
-                if not inline_data: 
-                    print(f"❌ Error analizando imagen {idx + 1}: No existe contenido en la Blob")
-                    continue
-
-                image_data: bytes | None = inline_data.data
-                if not image_data: 
-                    print(f"❌ Error analizando imagen {idx + 1}: No existen datos para imagen.")
-                    continue
-
-                mime_type: str | None = inline_data.mime_type
-                if not mime_type or not mime_type.startswith('image/'): 
-                    print(f"❌ Error analizando imagen {idx + 1}: El archivo no es una imagen.")
-                    continue
+            # Procesar máximo 2 imágenes usando los índices reales
+            for original_idx, image_part in image_parts[:2]:
+                inline_data: types.Blob = image_part.inline_data
+                image_data: bytes = inline_data.data
+                mime_type: str = inline_data.mime_type
 
                 image_hash: str = hashlib.md5(image_data).hexdigest()
-                print(f"🔍 Analizando imagen {idx + 1}: {len(image_data)} bytes, hash: {image_hash[:4]}")
+                print(f"🔍 Procesando imagen en índice original: {original_idx}")
+                print(f"   - Tamaño: {len(image_data)} bytes")
+                print(f"   - Tipo MIME: {mime_type}")
+                print(f"   - Hash: {image_hash[:8]}")
 
                 # Realizar análisis usando el modelo configurado
                 analysis_result: dict[str, str] = await self._analyze_image_with_model(
@@ -156,10 +172,19 @@ class ImageAnalysisTools:
                     "confidence": confidence,
                     "artifact_status": artifact_result.get('status'),
                     "image_hash": image_hash[:8],
-                    "analysis_notes": analysis_result.get("analysis", "")
+                    "analysis_notes": analysis_result.get("analysis", ""),
+                    "original_index": original_idx
                 })
 
                 print(f"✅ Imagen clasificada como: {image_type} (confianza: {confidence})")
+                print(f"   - State key guardado: {state_key}")
+                print(f"   - Artifact guardado: {filename}")
+
+            # Logging final del análisis
+            print(f"📊 RESUMEN DE ANÁLISIS:")
+            print(f"   - Total imágenes analizadas: {len(analyzed_images)}")
+            print(f"   - ine_front_image en state: {'ine_front_image' in tool_context.state}")
+            print(f"   - ine_back_image en state: {'ine_back_image' in tool_context.state}")
 
             return {
                 "status": "success",
@@ -228,22 +253,26 @@ class ImageAnalysisTools:
                     "message": "No hay Parts para validar"
                 }
 
+            # Logging inicial
+            print(f"🔍 VALIDACIÓN DE CALIDAD:")
+            print(f"   - Total parts a validar: {len(user_content_parts)}")
+
             validation_results = []
             for idx, image_part in enumerate(user_content_parts):
                 inline_data: types.Blob | None = image_part.inline_data
-                if not inline_data: 
-                    print(f"❌ Error validando calidad de imagen {idx + 1}: No existe inline_data")
+                if not inline_data:
+                    print(f"❌ Part {idx + 1}: No tiene inline_data")
                     continue
 
                 # Valiendo si el archivo es una imagen
                 mime_type: str | None = inline_data.mime_type
                 if not mime_type or not mime_type.startswith('image/'):
-                    print(f"❌ Error validando calidad de imagen {idx + 1}: El archivo no es una imagen")
+                    print(f"❌ Part {idx + 1}: No es una imagen (mime_type: {mime_type})")
                     continue
 
                 image_data: bytes | None = inline_data.data
-                if not image_data: 
-                    print(f"❌ Error validando calidad de imagen {idx + 1}: No existe contenido de imagen")
+                if not image_data:
+                    print(f"❌ Part {idx + 1}: No tiene datos de imagen")
                     continue
                 image_size = len(image_data)
 
@@ -254,13 +283,17 @@ class ImageAnalysisTools:
                 elif image_size < 200000:  # Menos de 200KB
                     quality = "medium"
 
+                is_valid = image_size >= 10000  # Al menos 10KB
+
                 validation_results.append({
                     "image_index": idx + 1,
                     "size_bytes": image_size,
                     "mime_type": mime_type,
                     "quality": quality,
-                    "is_valid": image_size >= 10000  # Al menos 10KB
+                    "is_valid": is_valid
                 })
+
+                print(f"✅ Imagen {idx + 1}: {quality} quality, {'válida' if is_valid else 'inválida'}, {image_size} bytes")
 
             return {
                 "status": "success",

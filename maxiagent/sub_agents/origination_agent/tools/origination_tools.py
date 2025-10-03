@@ -310,7 +310,16 @@ class OriginationTools:
             ine_front: str | None = tool_context.state.get('ine_front_image')
             ine_back: str | None = tool_context.state.get('ine_back_image')
 
+            # Logging crítico del estado
+            print(f"📤 PREPARANDO ENVÍO DE INE AL API:")
+            print(f"   - flow_uuid: {flow_uuid}")
+            print(f"   - ine_front_image presente: {'✅' if ine_front else '❌ FALTANTE'}")
+            print(f"   - ine_front_image tamaño: {len(ine_front) if ine_front else 0} chars")
+            print(f"   - ine_back_image presente: {'✅' if ine_back else '❌ FALTANTE'}")
+            print(f"   - ine_back_image tamaño: {len(ine_back) if ine_back else 0} chars")
+
             if not ine_front or not ine_back:
+                print(f"❌ ERROR: Faltan imágenes del INE")
                 return {
                     "status": "error",
                     "message": "Se requieren ambas imágenes del INE (frente y reverso)"
@@ -324,13 +333,16 @@ class OriginationTools:
                 "reversoBase64": ine_back
             }
 
-            await self._call_originador_api(
+            print(f"🚀 Enviando payload al API...")
+            response = await self._call_originador_api(
                 api_url,
                 method='POST',
                 params=params,
                 json_data=payload,
                 timeout=60
             )
+
+            print(f"✅ API respondió exitosamente: {response.status_code}")
 
             return {
                 "status": "success",
