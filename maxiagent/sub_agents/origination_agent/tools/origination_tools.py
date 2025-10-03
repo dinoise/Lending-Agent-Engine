@@ -319,10 +319,21 @@ class OriginationTools:
             print(f"   - ine_back_image tamaño: {len(ine_back) if ine_back else 0} chars")
 
             if not ine_front or not ine_back:
-                print(f"❌ ERROR: Faltan imágenes del INE")
+                missing_images = []
+                if not ine_front:
+                    missing_images.append("frente")
+                if not ine_back:
+                    missing_images.append("reverso")
+
+                missing_text = " y ".join(missing_images)
+                print(f"❌ ERROR: Faltan imágenes del INE: {missing_text}")
+
                 return {
                     "status": "error",
-                    "message": "Se requieren ambas imágenes del INE (frente y reverso)"
+                    "message": f"Se requieren ambas imágenes del INE. Faltante(s): {missing_text}. Por favor, proporciona la(s) imagen(es) faltante(s).",
+                    "missing_images": missing_images,
+                    "has_front": bool(ine_front),
+                    "has_back": bool(ine_back)
                 }
 
             api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
