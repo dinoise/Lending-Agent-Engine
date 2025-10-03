@@ -6,7 +6,7 @@ import logging
 import requests
 
 from requests.auth import HTTPBasicAuth
-from typing import List, Callable, Dict
+from typing import List, Callable, Dict, Any
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
@@ -961,6 +961,18 @@ class OriginationTools:
             segundo_apellido = form_data.get('segundoApellido', '')
             precio_moto = form_data.get('precioMoto', '')
 
+            # Convertir state a formato serializable
+            serializable_state: Dict[str, Any] = {
+                'flow_uuid': tool_context.state.get('flow_uuid', ''),
+                'user_data': user_data,
+                'form_data': form_data,
+                'nip_confirmed': tool_context.state.get('nip_confirmed', False),
+                'nip_requested': tool_context.state.get('nip_requested', False),
+                'offers': tool_context.state.get('offers', []),
+                'ine_front_image': tool_context.state.get('ine_front_image', ''),
+                'ine_back_image': tool_context.state.get('ine_back_image', '')
+            }
+
             # Preparar payload para n8n
             flow_payload = {
                 **selected_offer_data,
@@ -974,6 +986,7 @@ class OriginationTools:
                 "primer_apellido": primer_apellido,
                 "segundo_apellido": segundo_apellido,
                 "precio_moto": precio_moto,
+                "state": serializable_state
             }
 
             # Realizar POST a Workflows
