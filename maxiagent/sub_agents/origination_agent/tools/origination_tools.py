@@ -310,6 +310,10 @@ class OriginationTools:
             ine_front: str | None = tool_context.state.get('ine_front_image')
             ine_back: str | None = tool_context.state.get('ine_back_image')
 
+            # Obtener metadata de errores del análisis de imágenes
+            analysis_errors = tool_context.state.get('ine_analysis_errors', [])
+            processing_metadata = tool_context.state.get('ine_processing_metadata', {})
+
             # Logging crítico del estado
             print(f"📤 PREPARANDO ENVÍO DE INE AL API:")
             print(f"   - flow_uuid: {flow_uuid}")
@@ -317,23 +321,51 @@ class OriginationTools:
             print(f"   - ine_front_image tamaño: {len(ine_front) if ine_front else 0} chars")
             print(f"   - ine_back_image presente: {'✅' if ine_back else '❌ FALTANTE'}")
             print(f"   - ine_back_image tamaño: {len(ine_back) if ine_back else 0} chars")
+            print(f"   - Errores de análisis: {len(analysis_errors)}")
 
             if not ine_front or not ine_back:
                 missing_images = []
+                error_details = []
+
                 if not ine_front:
                     missing_images.append("frente")
+                    # Buscar errores relacionados con imagen frontal
+                    front_errors = [err for err in analysis_errors if err.get('error_type') in ['analysis_failed', 'type_indeterminate']]
+                    if front_errors:
+                        error_details.append(f"Imagen frente: {front_errors[0].get('error_message', 'Error desconocido')}")
+
                 if not ine_back:
                     missing_images.append("reverso")
+                    # Buscar errores relacionados con imagen reverso
+                    back_errors = [err for err in analysis_errors if err.get('error_type') in ['analysis_failed', 'type_indeterminate']]
+                    if back_errors and len(back_errors) > (1 if not ine_front else 0):
+                        error_details.append(f"Imagen reverso: {back_errors[-1].get('error_message', 'Error desconocido')}")
 
                 missing_text = " y ".join(missing_images)
                 print(f"❌ ERROR: Faltan imágenes del INE: {missing_text}")
 
+                # Construir mensaje con detalles de errores
+                error_message = f"Se requieren ambas imágenes del INE. Faltante(s): {missing_text}."
+
+                if error_details:
+                    error_message += "\n\nPosibles causas:\n" + "\n".join([f"• {detail}" for detail in error_details])
+                else:
+                    error_message += " Por favor, proporciona la(s) imagen(es) faltante(s)."
+
+                # Agregar información de metadata si está disponible
+                if processing_metadata:
+                    total_received = processing_metadata.get('total_images_received', 0)
+                    if total_received > 0:
+                        error_message += f"\n\nSe recibieron {total_received} imagen(es) pero no se pudieron clasificar correctamente."
+
                 return {
                     "status": "error",
-                    "message": f"Se requieren ambas imágenes del INE. Faltante(s): {missing_text}. Por favor, proporciona la(s) imagen(es) faltante(s).",
+                    "message": error_message,
                     "missing_images": missing_images,
                     "has_front": bool(ine_front),
-                    "has_back": bool(ine_back)
+                    "has_back": bool(ine_back),
+                    "analysis_errors": analysis_errors,
+                    "processing_metadata": processing_metadata
                 }
 
             api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"

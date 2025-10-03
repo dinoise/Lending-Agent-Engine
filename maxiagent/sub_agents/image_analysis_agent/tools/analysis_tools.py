@@ -104,6 +104,7 @@ class ImageAnalysisTools:
                 }
 
             analyzed_images = []
+            analysis_errors = []  # Tracking de errores
 
             # Procesar máximo 2 imágenes usando los índices reales
             for original_idx, image_part in image_parts[:2]:
@@ -124,7 +125,16 @@ class ImageAnalysisTools:
                 )
 
                 if analysis_result["status"] != "success":
-                    print(f"❌ Error analizando imagen {idx + 1}: {analysis_result.get('message')}")
+                    error_info = {
+                        "image_index": original_idx,
+                        "image_hash": image_hash[:8],
+                        "error_type": "analysis_failed",
+                        "error_message": analysis_result.get('message', 'Error desconocido en análisis'),
+                        "size_bytes": len(image_data),
+                        "mime_type": mime_type
+                    }
+                    analysis_errors.append(error_info)
+                    print(f"❌ Error analizando imagen {original_idx}: {analysis_result.get('message')}")
                     continue
                 
                 detected_type = analysis_result["type"]
@@ -140,9 +150,22 @@ class ImageAnalysisTools:
                     image_type = "reverso"
                     state_key = "ine_back_image"
                 else:
-                    filename = f"INE_indeterminado_{idx+1}.jpg"
+                    filename = f"INE_indeterminado_{original_idx+1}.jpg"
                     image_type = "indeterminado"
-                    state_key = f"ine_unknown_image_{idx+1}"
+                    state_key = f"ine_unknown_image_{original_idx+1}"
+
+                    # Registrar como error si es indeterminado
+                    error_info = {
+                        "image_index": original_idx,
+                        "image_hash": image_hash[:8],
+                        "error_type": "type_indeterminate",
+                        "error_message": f"No se pudo determinar si es frente o reverso. Análisis: {analysis_result.get('analysis', 'Sin detalles')}",
+                        "size_bytes": len(image_data),
+                        "mime_type": mime_type,
+                        "confidence": confidence
+                    }
+                    analysis_errors.append(error_info)
+                    print(f"⚠️  Imagen clasificada como indeterminada")
 
                 # Verificar duplicados
                 if state_key in tool_context.state:
@@ -180,17 +203,38 @@ class ImageAnalysisTools:
                 print(f"   - State key guardado: {state_key}")
                 print(f"   - Artifact guardado: {filename}")
 
+            # Guardar metadata de errores en el state para que otros agentes la usen
+            if analysis_errors:
+                tool_context.state['ine_analysis_errors'] = analysis_errors
+                print(f"⚠️  Se registraron {len(analysis_errors)} error(es) durante el análisis")
+
+            # Determinar qué imágenes fueron procesadas exitosamente
+            has_front = 'ine_front_image' in tool_context.state
+            has_back = 'ine_back_image' in tool_context.state
+
+            # Guardar metadata de procesamiento
+            tool_context.state['ine_processing_metadata'] = {
+                "has_front": has_front,
+                "has_back": has_back,
+                "total_images_received": len(image_parts),
+                "total_images_analyzed": len(analyzed_images),
+                "total_errors": len(analysis_errors),
+                "timestamp": time.time()
+            }
+
             # Logging final del análisis
             print(f"📊 RESUMEN DE ANÁLISIS:")
             print(f"   - Total imágenes analizadas: {len(analyzed_images)}")
-            print(f"   - ine_front_image en state: {'ine_front_image' in tool_context.state}")
-            print(f"   - ine_back_image en state: {'ine_back_image' in tool_context.state}")
+            print(f"   - Total errores: {len(analysis_errors)}")
+            print(f"   - ine_front_image en state: {has_front}")
+            print(f"   - ine_back_image en state: {has_back}")
 
             return {
                 "status": "success",
                 "message": f"Se analizaron {len(analyzed_images)} imagen(es) exitosamente",
                 "analyzed_images": analyzed_images,
-                "total_processed": len(analyzed_images)
+                "total_processed": len(analyzed_images),
+                "errors": analysis_errors if analysis_errors else None
             }
 
         except Exception as e:
