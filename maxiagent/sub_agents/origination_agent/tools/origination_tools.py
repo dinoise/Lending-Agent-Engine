@@ -94,10 +94,15 @@ class OriginationTools:
             process_result = await self._process_ine_documents(tool_context)
 
             if process_result.get('status') != 'success':
+                # Pasar toda la información de error incluyendo detalles del análisis
                 return {
                     "status": "error",
                     "step": "process_ine_documents",
-                    "message": f"Fallo en procesamiento INE: {process_result.get('message')}"
+                    "message": f"Fallo en procesamiento INE: {process_result.get('message')}",
+                    "missing_images": process_result.get('missing_images', []),
+                    "analysis_errors": process_result.get('analysis_errors', []),
+                    "processing_metadata": process_result.get('processing_metadata', {}),
+                    "suggestion": "Solicita al usuario que envíe las imágenes faltantes con una explicación clara de por qué fallaron."
                 }
 
             # Paso 3b: Verificar procesamiento
