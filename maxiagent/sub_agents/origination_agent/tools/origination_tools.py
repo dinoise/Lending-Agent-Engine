@@ -960,10 +960,12 @@ class OriginationTools:
             primer_apellido = form_data.get('primerApellido', '')
             segundo_apellido = form_data.get('segundoApellido', '')
             precio_moto = form_data.get('precioMoto', '')
+            direccion_ine = form_data.get('calle', '')
 
             # Convertir state a formato serializable
             serializable_state: Dict[str, Any] = {
                 'flow_uuid': tool_context.state.get('flow_uuid', ''),
+                'selected_plazo': tool_context.state.get('selected_plazo', ''),
                 'user_data': user_data,
                 'form_data': form_data,
                 'nip_confirmed': tool_context.state.get('nip_confirmed', False),
@@ -986,7 +988,9 @@ class OriginationTools:
                 "primer_apellido": primer_apellido,
                 "segundo_apellido": segundo_apellido,
                 "precio_moto": precio_moto,
-                "state": serializable_state
+                "state": serializable_state,
+                "direccion_ine": direccion_ine,
+                "url_seguimiento": "google.com"
             }
 
             # Realizar POST a Workflows
