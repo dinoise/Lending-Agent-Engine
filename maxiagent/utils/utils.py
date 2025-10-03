@@ -31,7 +31,7 @@ def get_page_content(url) -> str:
             # Extraer TODO el texto de la página, incluyendo elementos anidados
             all_text: str = soup.get_text(' ', strip=True)
 
-            return all_text[:10000]
+            return all_text[:2000]
     except Exception as e:
         print(f"Error: {e}")
         return ""

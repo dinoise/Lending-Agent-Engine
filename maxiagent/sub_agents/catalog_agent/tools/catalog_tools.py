@@ -43,23 +43,31 @@ class CatalogTools:
         Returns:
             dict: Resultados de la búsqueda con título, enlace y snippet
         """
-        service = build("customsearch", "v1", developerKey=current_config.GOOGLE_SEARCH_API_KEY)
-        res = service.cse().list(
-            q=query,
-            cx=current_config.GOOGLE_CSE_ID,
-            num=5
-        ).execute()
+        try:
+            service = build("customsearch", "v1", developerKey=current_config.GOOGLE_SEARCH_API_KEY)
+            res = service.cse().list(
+                q=query,
+                cx=current_config.GOOGLE_CSE_ID,
+                num=3  # Reducido de 5 a 3 para evitar respuestas muy grandes
+            ).execute()
 
-        results = []
-        for item in res.get("items", []):
-            # Obtener contenido extendido de la página
-            extended_content = get_page_content(item["link"])
+            results = []
+            for item in res.get("items", []):
+                # Obtener contenido extendido de la página
+                extended_content = get_page_content(item["link"])
 
-            results.append({
-                "title": item["title"],
-                "link": item["link"],
-                "snippet": item["snippet"],
-                "extended_content": extended_content
-            })
+                results.append({
+                    "title": item["title"],
+                    "link": item["link"],
+                    "snippet": item["snippet"],
+                    "extended_content": extended_content
+                })
 
-        return {"status": "success", "results": results}
+            return {"status": "success", "results": results}
+
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Error en búsqueda web: {str(e)}",
+                "results": []
+            }
