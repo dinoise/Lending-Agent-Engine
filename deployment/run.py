@@ -3,6 +3,12 @@ import vertexai
 from vertexai import agent_engines
 from dotenv import load_dotenv
 import json
+import logging
+
+# Suprimir warnings informativos de Google Gen AI SDK
+# Estos warnings son generados por el ADK framework cuando procesa respuestas
+# que incluyen thought_signature y function_call, lo cual es normal
+logging.getLogger('google.genai.types').setLevel(logging.ERROR)
 
 def pretty_print_event(event):
     """Pretty prints an event with truncation for long content."""

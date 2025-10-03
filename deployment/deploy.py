@@ -17,10 +17,16 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Suprimir warnings informativos de Google Gen AI SDK
+# Estos warnings son generados por el ADK framework cuando procesa respuestas
+# que incluyen thought_signature y function_call, lo cual es normal
+logging.getLogger('google.genai.types').setLevel(logging.ERROR)
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Ahora sí importar el agente (después de cargar .env)
-from maxiagent.agent import root_agent
+# Importar desde maxiagent para que se ejecute __init__.py y se aplique la supresión de warnings
+from maxiagent import root_agent
 
 @dataclass
 class AgentConfig:

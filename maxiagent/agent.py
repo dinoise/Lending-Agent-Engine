@@ -1,3 +1,9 @@
+import logging
+
+# Suprimir warnings informativos de Google Gen AI SDK (por si acaso)
+# Este logger ya debería estar configurado en __init__.py, pero lo reforzamos aquí
+logging.getLogger('google.genai.types').setLevel(logging.ERROR)
+
 from .prompts import RootAgentPrompts
 from .tools import RootAgentTools
 from .config import current_config
