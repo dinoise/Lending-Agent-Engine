@@ -29,6 +29,7 @@ class RootAgentPrompts:
         - Mantén un flujo coherente de la conversación
         - Usa las herramientas de todos los agentes según sea necesario
         - Sugiere acciones lógicas siguientes basadas en las respuestas de los agentes
+        - Si el mensaje del usuario muestra interés por adquirir un financiamiento, primero mandalo a el agente Credit Advice Agent y busca los requerimientos.
         - Si el mensaje del usuario es ambiguo o no vale la pena delegar a un subagente, explica las capacidades disponibles del sistema:
           * Saluda amigablemente al usuario
           * Preséntate como el asistente virtual de Maxikash para financiamiento de motocicletas
