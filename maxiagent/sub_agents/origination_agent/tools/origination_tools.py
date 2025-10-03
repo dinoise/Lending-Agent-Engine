@@ -955,6 +955,11 @@ class OriginationTools:
             curp = user_data.get('curp', '')
             celular = form_data.get('celular', '')
             email = form_data.get('correoElectronico', '')
+            primer_nombre = form_data.get('primerNombre', '')
+            segundo_nombre = form_data.get('segundoNombre', '')
+            primer_apellido = form_data.get('primerApellido', '')
+            segundo_apellido = form_data.get('segundoApellido', '')
+            precio_moto = form_data.get('precioMoto', '')
 
             # Preparar payload para n8n
             flow_payload = {
@@ -963,7 +968,12 @@ class OriginationTools:
                 "celular": celular,
                 "email": email,
                 "flow_uuid": flow_uuid,
-                "plazo": plazo_selected
+                "plazo": plazo_selected,
+                "primer_nombre": primer_nombre,
+                "segundo_nombre": segundo_nombre,
+                "primer_apellido": primer_apellido,
+                "segundo_apellido": segundo_apellido,
+                "precio_moto": precio_moto,
             }
 
             # Realizar POST a Workflows
