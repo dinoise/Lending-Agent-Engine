@@ -181,13 +181,20 @@ class OriginationTools:
                     "step": "send_nip",
                     "message": f"Fallo en solicitud de NIP: {nip_result.get('message')}"
                 }
+            
+            nip_requested = tool_context.state['nip_requested']
 
-            logger.info("✨ Formulario enviado y NIP solicitado exitosamente")
-
+            if nip_requested:
+                logger.info("✨ Formulario enviado y NIP solicitado exitosamente")
+                msg: str = "✅ Formulario enviado exitosamente\n\n📱 He solicitado el envío de un NIP de 6 dígitos a tu celular.\n\n⏱️ Por favor, revisa tu teléfono y proporciónameEL NIP cuando lo recibas."
+            else: 
+                logger.info("✨ Formulario enviado, no es necesario solicitar NIP")
+                msg: str = "✅ Formulario enviado exitosamente\n\n📱 Ahora voy a darte tus ofertas."
+            
             return {
                 "status": "success",
-                "message": "✅ Formulario enviado exitosamente\n\n📱 He solicitado el envío de un NIP de 6 dígitos a tu celular.\n\n⏱️ Por favor, revisa tu teléfono y proporciónameEL NIP cuando lo recibas.",
-                "next_step": "Esperando NIP del usuario"
+                "message": msg,
+                "next_step": "Esperando NIP del usuario" if nip_requested else "Pasando al siguiente paso."
             }
 
         except Exception as e:
@@ -197,16 +204,16 @@ class OriginationTools:
                 "message": f"Error inesperado: {str(e)}"
             }
 
-    async def confirm_nip_and_get_offers(self, tool_context: ToolContext, nip: str) -> dict:
+    async def confirm_nip_and_get_offers(self, tool_context: ToolContext, nip: str = "") -> dict:
         """
         TOOL ENCADENADA: Ejecuta automáticamente los pasos 7-8 (confirmar NIP + consultar ofertas).
 
         Pasos que ejecuta:
-        1. confirm_nip() - Confirma el NIP de 6 dígitos
+        1. confirm_nip() - Confirma el NIP de 6 dígitos (solo si fue requerido)
         2. query_offers() - Consulta ofertas automáticamente
 
         Args:
-            nip: NIP de 6 dígitos proporcionado por el usuario
+            nip: NIP de 6 dígitos proporcionado por el usuario (opcional si no fue requerido)
 
         Returns:
             Dict con ofertas disponibles formateadas
@@ -214,16 +221,23 @@ class OriginationTools:
         logger.info("🔗 Iniciando confirmación NIP + consulta de ofertas (pasos 7-8)")
 
         try:
-            # Paso 7: Confirmar NIP
-            logger.info("🔐 Paso 7: Confirmando NIP...")
-            nip_result = await self._confirm_nip(tool_context, nip)
+            nip_requested = tool_context.state.get('nip_requested', False)
 
-            if nip_result.get('status') != 'success':
-                return {
-                    "status": "error",
-                    "step": "confirm_nip",
-                    "message": f"Fallo en confirmación de NIP: {nip_result.get('message')}"
-                }
+            # Paso 7: Confirmar NIP (solo si fue requerido)
+            if nip_requested:
+                logger.info("🔐 Paso 7: Confirmando NIP...")
+                nip_result = await self._confirm_nip(tool_context, nip)
+
+                if nip_result.get('status') != 'success':
+                    return {
+                        "status": "error",
+                        "step": "confirm_nip",
+                        "message": f"Fallo en confirmación de NIP: {nip_result.get('message')}"
+                    }
+            else:
+                # Si no se requirió NIP, marcar como confirmado para continuar el flujo
+                logger.info("⏭️ Paso 7: NIP no requerido, saltando confirmación...")
+                tool_context.state['nip_confirmed'] = True
 
             # Paso 8: Consultar ofertas automáticamente
             logger.info("💰 Paso 8: Consultando ofertas...")
@@ -236,11 +250,12 @@ class OriginationTools:
                     "message": f"Fallo en consulta de ofertas: {offers_result.get('message')}"
                 }
 
-            logger.info("✨ NIP confirmado y ofertas consultadas exitosamente")
+            success_message = "✅ NIP confirmado exitosamente" if nip_requested else "✅ Proceso completado exitosamente"
+            logger.info(f"✨ {'NIP confirmado y ofertas consultadas' if nip_requested else 'Ofertas consultadas'} exitosamente")
 
             return {
                 "status": "success",
-                "message": "✅ NIP confirmado exitosamente",
+                "message": success_message,
                 "offers": offers_result.get('offers', []),
                 "offers_count": offers_result.get('offers_count', 0),
                 "next_step": "Presenta las ofertas al usuario usando el formato obligatorio"
@@ -658,7 +673,7 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            requests.Response = await self._call_originador_api(
+            await self._call_originador_api(
                 api_url,
                 method='POST',
                 params=params,
@@ -716,19 +731,28 @@ class OriginationTools:
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/pedir-nip"
             params = {"uuidFlujo": flow_uuid}
 
-            await self._call_originador_api(
+            response: requests.Response = await self._call_originador_api(
                 api_url,
                 method='GET',
                 params=params,
                 timeout=30
             )
 
-            # Guardar estado del NIP
-            tool_context.state['nip_requested'] = True
+            response_json = response.json()
+
+            print( "pedir nip res ", response_json )
+
+            req_nip: bool = response_json.get("pedirNip")
+
+            if req_nip:
+                # Guardar estado del NIP
+                tool_context.state['nip_requested'] = True
+            else:
+                tool_context.state['nip_requested'] = False
 
             return {
                 "status": "success",
-                "message": "NIP enviado exitosamente. El usuario debe revisar su teléfono celular."
+                "message": "NIP enviado exitosamente. El usuario debe revisar su teléfono celular." if req_nip else "No es necesario que pidas el NIP, al siguiente paso"
             }
 
         except requests.RequestException as e:
@@ -890,9 +914,12 @@ class OriginationTools:
                     "message": "Flujo no inicializado"
                 }
 
-            # Verificar que el NIP haya sido confirmado
+            # Verificar que el NIP haya sido confirmado (solo si fue requerido)
+            nip_requested = tool_context.state.get('nip_requested', False)
             nip_confirmed = tool_context.state.get('nip_confirmed', False)
-            if not nip_confirmed:
+
+            # Solo validar NIP si fue requerido
+            if nip_requested and not nip_confirmed:
                 return {
                     "status": "error",
                     "message": "NIP no confirmado. Confirma el NIP usando confirm_nip primero."

@@ -60,13 +60,17 @@ class OriginationPrompts:
         - Cuando recibas los datos del usuario, **USA `complete_form_and_nip(additional_data)`**
         - Esta tool ejecuta AUTOMÁTICAMENTE:
           → Envía formulario completo
-          → Solicita NIP al celular
-        - Informa al usuario que revise su celular para el NIP
+          → Solicita NIP al celular (si es necesario)
+        - **IMPORTANTE**: Lee la respuesta de la tool:
+          - Si `nip_requested` es True: Informa al usuario que revise su celular para el NIP
+          - Si `nip_requested` es False: El NIP NO es necesario, continúa al paso 7-8 inmediatamente
 
         **7-8. NIP + Ofertas (TOOL ENCADENADA):**
-        - Cuando el usuario proporcione el NIP, **USA `confirm_nip_and_get_offers(nip)`**
+        - **USA `confirm_nip_and_get_offers(nip)`** en dos casos:
+          a) Si se solicitó NIP: Cuando el usuario proporcione el NIP de 6 dígitos
+          b) Si NO se solicitó NIP: Llama inmediatamente (el parámetro `nip` será ignorado)
         - Esta tool ejecuta AUTOMÁTICAMENTE:
-          → Confirma el NIP
+          → Confirma el NIP (solo si fue requerido)
           → Consulta ofertas
         - **PRESENTA LAS OFERTAS** usando el formato obligatorio
 
@@ -77,8 +81,8 @@ class OriginationPrompts:
 
         **TOOLS ENCADENADAS DISPONIBLES:**
         - `process_ine_complete()` → Pasos 3-4 automáticos
-        - `complete_form_and_nip(additional_data)` → Pasos 5-6 automáticos
-        - `confirm_nip_and_get_offers(nip)` → Pasos 7-8 automáticos
+        - `complete_form_and_nip(additional_data)` → Pasos 5-6 automáticos (NIP condicional)
+        - `confirm_nip_and_get_offers(nip)` → Pasos 7-8 automáticos (salta NIP si no fue requerido)
 
         **Manejo de Errores:**
         - Las tools encadenadas manejan errores internos
@@ -92,8 +96,8 @@ class OriginationPrompts:
 
         **🔗 TOOLS ENCADENADAS (USA ESTAS PRIMERO):**
         - `process_ine_complete()`: Ejecuta pasos 3-4 (procesar + validar INE)
-        - `complete_form_and_nip(additional_data)`: Ejecuta pasos 5-6 (formulario + solicitar NIP)
-        - `confirm_nip_and_get_offers(nip)`: Ejecuta pasos 7-8 (confirmar NIP + consultar ofertas)
+        - `complete_form_and_nip(additional_data)`: Ejecuta pasos 5-6 (formulario + solicitar NIP si es necesario)
+        - `confirm_nip_and_get_offers(nip)`: Ejecuta pasos 7-8 (confirmar NIP solo si fue requerido + consultar ofertas)
 
         **Tools Básicas:**
         - `initialize_flow()`: Inicia nuevo proceso de cotización
@@ -119,19 +123,24 @@ class OriginationPrompts:
         **🎯 USO DE TOOLS ENCADENADAS:**
         - **USA `process_ine_complete()`** inmediatamente después del análisis de imágenes
         - **USA `complete_form_and_nip(additional_data)`** cuando recibas los datos del formulario
-        - **USA `confirm_nip_and_get_offers(nip)`** cuando el usuario proporcione el NIP
+        - **USA `confirm_nip_and_get_offers(nip)`**:
+          → Si NIP fue solicitado: cuando el usuario proporcione el NIP
+          → Si NIP NO fue solicitado: inmediatamente después de `complete_form_and_nip()`
         - Las tools encadenadas ejecutan múltiples pasos AUTOMÁTICAMENTE
-        - Solo espera confirmación del usuario para: datos del formulario, NIP, selección de oferta
+        - Las tools manejan automáticamente si el NIP es requerido o no
 
         **PAUSAS REQUERIDAS (solicitar datos del usuario):**
         1. Después de `process_ine_complete()` → Solicitar: celular, email, precio ESTIMADO de la moto
-        2. Después de `complete_form_and_nip()` → Esperar NIP del usuario
+        2. Después de `complete_form_and_nip()`:
+           - Si `nip_requested` es True → Esperar NIP del usuario
+           - Si `nip_requested` es False → NO esperar, llamar `confirm_nip_and_get_offers()` inmediatamente
         3. Después de presentar ofertas → Esperar selección del usuario
 
         **Validaciones:**
-        - El NIP DEBE ser 6 dígitos exactos
+        - El NIP DEBE ser 6 dígitos exactos (solo si fue solicitado)
         - Valida formato de datos antes de enviar
         - Si falla una tool encadenada, revisa el campo "step" para saber qué falló
+        - Revisa el campo `nip_requested` en la respuesta de `complete_form_and_nip()` para saber si debes pedir NIP al usuario
 
         **Estado de Variables (manejado por las tools):**
         - flow_uuid, user_data, form_data, nip_confirmed, offers, selected_plazo
