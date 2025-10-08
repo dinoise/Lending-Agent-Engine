@@ -603,42 +603,51 @@ class OriginationTools:
                     "status": "error",
                     "message": f"No se pudieron obtener los datos de dirección: {error_msg}"
                 }
-
+            
             # Combinar datos del INE con datos adicionales
             form_data = {
-                "celular": additional_data.get('celular'),
                 "curp": user_data.get('curp'),
                 "primerNombre": user_data.get('primerNombre'),
                 "segundoNombre": user_data.get('segundoNombre'),
-                "primerApellido": user_data.get('primerApellido'),
-                "segundoApellido": user_data.get('segundoApellido'),
-                "fechaNacimiento": user_data.get('fechaNacimiento'),
-                "calle": user_data.get('calle'),
+                "apellidoPaterno": user_data.get('apellidoPaterno'),
+                "apellidoMaterno": user_data.get('apellidoMaterno'),
+                "fechaNacimiento": "29/05/1989", # user_data.get('fechaNacimiento'),
+                "direccion": user_data.get('direccion'),
+                
+                "idColoniaPoblacion": address_data.get("idColonia"),
+                "coloniaPoblacion": user_data.get('coloniaPoblacion'),
+
+                "idAlcaldiaMunicipio": address_data.get("idMunicipio"),
+                "delegacionMunicipio": user_data.get('delegacionMunicipio'),
+
+                "idEstado": address_data.get("idEstado"),
+                "estado": user_data.get('estado'),
+
+                "ciudad": user_data.get('ciudad'),
+
                 "codigoPostal": codigoPostal,
+                
                 "rfc": user_data.get('rfc'),
-                "correoElectronico": additional_data.get('correoElectronico'),
-                "ingresoMensual": None,
-                "precioMoto": additional_data.get('precioMoto'),
-                "enganche": None,
-                "numeroPromotor": "MAXIAGENT",
-                "marcaMoto": additional_data.get('marcaMoto'),
+                "email": additional_data.get('correoElectronico'),
+
+                "numeroPromotor": "MaxiAgent",
+
                 "modeloMoto": additional_data.get('modeloMoto'),
-                "estado": address_data.get("idEstado"),
-                "municipio": address_data.get("idMunicipio"),
-                "colonia": address_data.get("idColonia"),
-                "fk_usuario_creacion": "",
-                "mostrarCampos": None
+                "marcaMoto": additional_data.get('marcaMoto'),
+                "precioMoto": additional_data.get('precioMoto'),
+
+                "celular": additional_data.get('celular')
             }
 
             # Validar datos requeridos
-            required_fields: List[str] = ['celular', 'curp', 'correoElectronico', 'precioMoto']
+            required_fields: List[str] = ['celular', 'curp', 'email', 'precioMoto']
             missing_fields: List[str] = [field for field in required_fields if not form_data.get(field)]
 
             # Validar datos de dirección requeridos
-            address_required_fields: List[str] = ['estado', 'municipio', 'colonia']
+            address_required_fields: List[str] = ['idEstado', 'idAlcaldiaMunicipio', 'idColoniaPoblacion']
             missing_address_fields: List[str] = [field for field in address_required_fields if not form_data.get(field)]
 
-            all_missing_fields = missing_fields + missing_address_fields
+            all_missing_fields: List[str] = missing_fields + missing_address_fields
 
             if all_missing_fields:
                 return {
