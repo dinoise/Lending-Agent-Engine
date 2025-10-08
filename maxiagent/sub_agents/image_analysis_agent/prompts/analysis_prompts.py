@@ -1,21 +1,27 @@
-class ImageAnalysisPrompts:
+from ....prompts.base_prompts import BaseAgentPrompts
+
+
+class ImageAnalysisPrompts(BaseAgentPrompts):
     """Clase para gestionar los prompts del agente de análisis de imágenes."""
 
     def __init__(self):
+        super().__init__()
         self._sections = {
             'role': self._get_role_section(),
             'functionality': self._get_functionality_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section()
+            'restrictions': self._get_restrictions_section(),
+            'global_restrictions': self.get_global_restrictions()
         }
 
     def get_full_prompt(self) -> str:
-        """Retorna el prompt completo de instrucciones."""
+        """Retorna el prompt completo de instrucciones con restricciones globales."""
         return "\n".join([
             self._sections['role'],
             self._sections['functionality'],
             self._sections['tools_usage'],
-            self._sections['restrictions']
+            self._sections['restrictions'],
+            self._sections['global_restrictions']
         ])
 
     def get_section(self, section_name: str) -> str:

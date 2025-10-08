@@ -1,21 +1,27 @@
-class CatalogPrompts:
+from ....prompts.base_prompts import BaseAgentPrompts
+
+
+class CatalogPrompts(BaseAgentPrompts):
     """Class to manage Catalog Agent instruction prompts."""
 
     def __init__(self):
+        super().__init__()
         self._sections = {
             'role': self._get_role_section(),
             'catalog_consultation': self._get_catalog_consultation_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section()
+            'restrictions': self._get_restrictions_section(),
+            'global_restrictions': self.get_global_restrictions()
         }
 
     def get_full_prompt(self) -> str:
-        """Return the complete instruction prompt."""
+        """Return the complete instruction prompt with global restrictions."""
         return "\n".join([
             self._sections['role'],
             self._sections['catalog_consultation'],
             self._sections['tools_usage'],
-            self._sections['restrictions']
+            self._sections['restrictions'],
+            self._sections['global_restrictions']
         ])
 
     def get_section(self, section_name: str) -> str:

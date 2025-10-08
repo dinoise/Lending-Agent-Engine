@@ -23,6 +23,7 @@ root_agent = Agent(
     model=current_config.ROOT_AGENT_MODEL,
     name='maxiagent',
     instruction=prompts.get_coordination_prompt(),
+    global_instruction=prompts.get_global_instruction(),
     sub_agents=[credit_advice_agent,
                 # calculation_agent,
                 catalog_agent,

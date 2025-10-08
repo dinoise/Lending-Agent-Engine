@@ -1,13 +1,16 @@
-class RootAgentPrompts:
+from .base_prompts import BaseAgentPrompts
+
+
+class RootAgentPrompts(BaseAgentPrompts):
     """Root agent that coordinates between specialized sub-agents."""
-    
+
     def get_coordination_prompt(self) -> str:
         return """
         **Objetivo Principal:**
 
 
         Eres el coordinador principal del sistema de financiamiento de motocicletas de Maxikash.
-        
+
         Tu función es:
         1. Analizar las consultas del usuario
         2. Determinar qué agente especializado debe manejar la tarea
