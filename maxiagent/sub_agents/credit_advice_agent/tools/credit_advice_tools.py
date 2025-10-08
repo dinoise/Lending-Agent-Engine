@@ -1,37 +1,22 @@
 import requests
 import json
 
-from typing import Any, List, Callable, Dict
+from typing import Any, Dict
 
 from ....config import current_config
+from ....tools.base_tools import BaseAgentTools
 
-class CreditAdviceTools:
+
+class CreditAdviceTools(BaseAgentTools):
     """Clase para gestionar las herramientas del agente de asesoría de crédito."""
 
     def __init__(self):
+        super().__init__()
         self._tools = {
             'database_tools': {
                 'semantic_search': self.semantic_search
             }
         }
-
-    def get_all_tools(self) -> List:
-        """Retorna una lista con todas las funciones herramienta."""
-        all_tools = []
-        for category in self._tools.values():
-            all_tools.extend(category.values())
-        return all_tools
-
-    def get_tools_by_category(self, category: str) -> Dict[str, Callable]:
-        """Retorna las herramientas de una categoría específica."""
-        return self._tools.get(category, {})
-
-    def get_tool(self, tool_name: str) -> Callable:
-        """Retorna una herramienta específica por nombre."""
-        for category in self._tools.values():
-            if tool_name in category:
-                return category[tool_name]
-        raise ValueError(f"Herramienta '{tool_name}' no encontrada")
 
     # --- Herramientas para la base de datos ---
     def semantic_search(

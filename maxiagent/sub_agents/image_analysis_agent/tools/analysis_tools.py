@@ -1,7 +1,7 @@
 import hashlib
 import time
 import base64
-from typing import List, Callable, Dict
+from typing import List
 
 from google import genai
 from google.genai import types
@@ -9,13 +9,16 @@ from google.genai import types
 from google.adk.tools.tool_context import ToolContext
 from ..prompts.analysis_prompts import ImageAnalysisPrompts
 from ....config import current_config
+from ....tools.base_tools import BaseAgentTools
 
 # Safety settings se configuran usando enums del nuevo Google Gen AI SDK
 
-class ImageAnalysisTools:
+
+class ImageAnalysisTools(BaseAgentTools):
     """Clase para gestionar las herramientas del agente de análisis de imágenes."""
 
     def __init__(self):
+        super().__init__()
         self._prompts = ImageAnalysisPrompts()
         self._client = None  # Cliente Gen AI (se inicializa cuando se necesite)
         self._tools = {
@@ -25,24 +28,6 @@ class ImageAnalysisTools:
                 'validate_image_quality': self.validate_image_quality
             }
         }
-
-    def get_all_tools(self) -> List:
-        """Retorna una lista con todas las funciones herramienta."""
-        all_tools = []
-        for category in self._tools.values():
-            all_tools.extend(category.values())
-        return all_tools
-
-    def get_tools_by_category(self, category: str) -> Dict[str, Callable]:
-        """Retorna las herramientas de una categoría específica."""
-        return self._tools.get(category, {})
-
-    def get_tool(self, tool_name: str) -> Callable:
-        """Retorna una herramienta específica por nombre."""
-        for category in self._tools.values():
-            if tool_name in category:
-                return category[tool_name]
-        raise ValueError(f"Herramienta '{tool_name}' no encontrada")
 
     async def analyze_ine_document(
         self,

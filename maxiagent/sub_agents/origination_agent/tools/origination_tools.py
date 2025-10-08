@@ -10,10 +10,12 @@ from typing import List, Callable, Dict, Any
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
+from ....tools.base_tools import BaseAgentTools
 
 logger = logging.getLogger(__name__)
 
-class OriginationTools:
+
+class OriginationTools(BaseAgentTools):
     """Clase para gestionar las herramientas del agente de originación."""
 
     VALIDATION_ENDPOINTS = {
@@ -41,6 +43,7 @@ class OriginationTools:
     }
 
     def __init__(self):
+        super().__init__()
         self._tools = {
             'chained_tools': {
                 'process_ine_complete': self.process_ine_complete,

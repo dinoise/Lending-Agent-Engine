@@ -2,18 +2,21 @@ import requests
 import json
 
 from datetime import datetime
-from typing import Any, List, Callable, Dict
+from typing import Any, Dict
 
 from ..config import current_config
 from ..utils import get_page_content
+from .base_tools import BaseAgentTools
 
 from googleapiclient.discovery import build
 from google.adk.tools.tool_context import ToolContext
 
-class RootAgentTools:
+
+class RootAgentTools(BaseAgentTools):
     """Clase para gestionar y organizar las herramientas del agente."""
-    
+
     def __init__(self):
+        super().__init__()
         self._tools = {
             'search_tools': {
                 'google_web_search': self.google_web_search
@@ -33,36 +36,6 @@ class RootAgentTools:
                 'semantic_search': self.semantic_search
             }
         }
-    
-    def get_all_tools(self) -> List:
-        """Retorna una lista con todas las funciones herramienta."""
-        all_tools = []
-        for category in self._tools.values():
-            all_tools.extend(category.values())
-        return all_tools
-    
-    def get_tools_by_category(self, category: str) -> Dict[str, Callable]:
-        """Retorna las herramientas de una categoría específica."""
-        return self._tools.get(category, {})
-    
-    def get_tool(self, tool_name: str) -> Callable:
-        """Retorna una herramienta específica por nombre."""
-        for category in self._tools.values():
-            if tool_name in category:
-                return category[tool_name]
-        raise ValueError(f"Herramienta '{tool_name}' no encontrada")
-    
-    def get_tool_descriptions(self) -> List[Dict]:
-        """Retorna descripciones de todas las herramientas para el agente."""
-        descriptions = []
-        for _, tools in self._tools.items():
-            for tool_name, tool_func in tools.items():
-                descriptions.append({
-                    'name': tool_name,
-                    'description': tool_func.__doc__ or f"Función {tool_name}",
-                    'function': tool_func
-                })
-        return descriptions
 
     # --- Herramientas de Búsqueda ---
     def google_web_search(self, query: str) -> dict:
