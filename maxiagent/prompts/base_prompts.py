@@ -12,6 +12,17 @@ class BaseAgentPrompts:
     All agent prompt classes should inherit from this class.
     """
 
+    def __init__(self):
+        self._sections = {}
+
+    def get_full_prompt(self) -> str:
+        """Return the complete instruction prompt with all sections."""
+        return "\n".join([section for section in self._sections.values() if section])
+
+    def get_section(self, section_name: str) -> str:
+        """Return a specific section of the prompt."""
+        return self._sections.get(section_name, "")
+
     def get_global_restrictions(self) -> str:
         """
         Global restrictions that apply to ALL agents.

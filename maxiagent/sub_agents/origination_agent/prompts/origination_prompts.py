@@ -15,21 +15,6 @@ class OriginationPrompts(BaseAgentPrompts):
             'global_restrictions': self.get_global_restrictions()
         }
 
-    def get_full_prompt(self) -> str:
-        """Return the complete instruction prompt with global restrictions."""
-        return "\n".join([
-            self._sections['role'],
-            self._sections['functionality'],
-            self._sections['tools_usage'],
-            self._sections['offer_formatting'],
-            self._sections['restrictions'],
-            self._sections['global_restrictions']
-        ])
-
-    def get_section(self, section_name: str) -> str:
-        """Return a specific section of the prompt."""
-        return self._sections.get(section_name, "")
-
     def _get_role_section(self) -> str:
         return """
         **Objetivo Principal:**

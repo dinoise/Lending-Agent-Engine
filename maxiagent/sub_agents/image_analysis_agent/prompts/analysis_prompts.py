@@ -14,20 +14,6 @@ class ImageAnalysisPrompts(BaseAgentPrompts):
             'global_restrictions': self.get_global_restrictions()
         }
 
-    def get_full_prompt(self) -> str:
-        """Retorna el prompt completo de instrucciones con restricciones globales."""
-        return "\n".join([
-            self._sections['role'],
-            self._sections['functionality'],
-            self._sections['tools_usage'],
-            self._sections['restrictions'],
-            self._sections['global_restrictions']
-        ])
-
-    def get_section(self, section_name: str) -> str:
-        """Retorna una sección específica del prompt."""
-        return self._sections.get(section_name, "")
-
     def get_ine_analysis_prompt(self) -> str:
         """Retorna el prompt especializado para análisis de imágenes INE."""
         return """
