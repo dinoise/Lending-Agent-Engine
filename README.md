@@ -283,23 +283,107 @@ Agent: [Confirms selection]
 
 ### Deploy to Vertex AI Agent Engine
 
-1. **Configure deployment settings** in `deployment/deploy.py`
+The deployment script (`deployment/deploy.py`) provides comprehensive agent lifecycle management using the Vertex AI Agent Engines API.
 
-2. **Deploy the agent:**
-   ```bash
-   python deployment/deploy.py
-   ```
+#### Prerequisites
 
-3. **Grant necessary permissions:**
-   ```bash
-   chmod +x deployment/grant_permissions.sh
-   ./deployment/grant_permissions.sh
-   ```
+Ensure your `.env` file contains the required variables for your target environment:
 
-4. **Test the deployed agent:**
-   ```bash
-   python deployment/run.py
-   ```
+**Development Environment:**
+- `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `STAGING_BUCKET`
+- `RAG_CORPUS`, `GOOGLE_CSE_ID`, `GOOGLE_SEARCH_API_KEY`
+- `ROOT_AGENT_MODEL`, `ENV` (set to "dev")
+- `URL_CALCULADORA_DEV`, `KEY_CALCULADORA_DEV`, `API_MAXIKASH_DEV`
+- `URL_ORIGINADOR_DEV`, `KEY_ORIGINADOR_DEV`
+- `URL_DATA_MAXI_DEV`, `USRNAME_DATA_MAXI_DEV`, `PASSWORD_DATA_MAXI_DEV`
+- `ADK_ARTIFACT_BUCKET`
+
+**Production Environment:**
+- Same as dev but with `_PROD` suffix variables and `ENV=prod`
+
+#### Deployment Commands
+
+**1. Create a New Agent:**
+```bash
+python deployment/deploy.py --create --display-name "MaxiAgent Dev" --env dev
+```
+
+**For Production:**
+```bash
+python deployment/deploy.py --create --display-name "MaxiAgent Prod" --env prod
+```
+
+**What happens during creation:**
+- Creates a new Vertex AI Agent Engine
+- Uploads agent code and dependencies
+- Configures environment variables based on specified environment (dev/prod)
+- Sets up auto-scaling (min: 1, max: 10 instances)
+- Enables distributed tracing
+- Returns the agent resource ID
+
+**2. Update an Existing Agent:**
+```bash
+python deployment/deploy.py --update --resource-id <AGENT_ENGINE_ID> --env dev
+```
+
+Example:
+```bash
+python deployment/deploy.py --update --resource-id 1234567890123456789 --env dev
+```
+
+**What happens during update:**
+- Updates agent code and logic without creating a new resource
+- Refreshes dependencies and requirements
+- Updates environment variables
+- Preserves the same resource ID
+
+**3. Delete an Agent:**
+```bash
+python deployment/deploy.py --delete --resource-id <AGENT_ENGINE_ID>
+```
+
+**Note:** Uses `force=True` to delete even if there are active sessions or associated memory.
+
+#### Deployment Configuration
+
+The deployment automatically includes:
+
+**Required Packages:**
+- `google-cloud-aiplatform[adk,agent_engines]>=1.118.0`
+- `google-adk>=1.15.1`
+- `python-dotenv`, `google-auth`, `requests`
+- `llama_index`, `langchain-google-vertexai`
+- `beautifulsoup4`, `tqdm`, `deprecated`
+
+**Auto-scaling Settings:**
+- Minimum instances: 1 (keeps agent warm)
+- Maximum instances: 10 (handles traffic spikes)
+
+**Additional Features:**
+- Distributed tracing enabled for debugging
+- Custom packages: `./maxiagent` (entire agent codebase)
+- Environment-specific configurations (dev/prod)
+
+#### Post-Deployment
+
+**Grant Necessary Permissions:**
+```bash
+chmod +x deployment/grant_permissions.sh
+./deployment/grant_permissions.sh
+```
+
+**Test the Deployed Agent:**
+```bash
+python deployment/run.py
+```
+
+#### Environment Management
+
+The script supports two environments:
+- **`dev`**: Uses development API endpoints and credentials
+- **`prod`**: Uses production API endpoints and credentials
+
+Always specify `--env` when creating or updating agents to ensure correct configuration is loaded.
 
 ## Development
 
