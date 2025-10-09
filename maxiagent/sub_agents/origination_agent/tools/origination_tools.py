@@ -6,7 +6,7 @@ import logging
 import requests
 
 from requests.auth import HTTPBasicAuth
-from typing import List, Callable, Dict, Any
+from typing import List, Dict, Any
 
 from google.adk.tools.tool_context import ToolContext
 from ....config import current_config
@@ -56,24 +56,6 @@ class OriginationTools(BaseAgentTools):
                 'select_offer': self.select_offer
             }
         }
-
-    def get_all_tools(self) -> List:
-        """Retorna una lista con todas las funciones herramienta."""
-        all_tools = []
-        for category in self._tools.values():
-            all_tools.extend(category.values())
-        return all_tools
-
-    def get_tools_by_category(self, category: str) -> Dict[str, Callable]:
-        """Retorna las herramientas de una categoría específica."""
-        return self._tools.get(category, {})
-
-    def get_tool(self, tool_name: str) -> Callable:
-        """Retorna una herramienta específica por nombre."""
-        for category in self._tools.values():
-            if tool_name in category:
-                return category[tool_name]
-        raise ValueError(f"Herramienta '{tool_name}' no encontrada")
 
     # === Chained Tools (Auto-execute multiple steps) ===
 
