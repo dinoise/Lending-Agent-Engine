@@ -552,6 +552,8 @@ class OriginationTools(BaseAgentTools):
             
             results["can_proceed"] = can_proceed
             results["message"] = "Validación completada" if can_proceed else "CURP no válido para proceso"
+            # Guardar datos de las validaciones de curp
+            tool_context.state['curp_results'] = results
 
             return results
 
@@ -593,6 +595,15 @@ class OriginationTools(BaseAgentTools):
                     "message": "Código postal no disponible en los datos del INE"
                 }
 
+            # En ocasiones, el OCR no puede obtener le fecha de nacimiento, entonces se obtiene
+            # del resultado de renapo
+            fecha_nacimiento = user_data.get('fechaNacimiento')
+            if not fecha_nacimiento:
+                curp_results = tool_context.state.get('curp_results', {})
+                renapo_details = curp_results.get('renapo_details', {})
+                res_renapo = renapo_details.get('responseRenapoDto', {})
+                fecha_nacimiento = res_renapo.get('fecha_nacimiento')
+
             # Obteniendo los datos de dirección
             address_data: dict = self._get_address_data(codigoPostal)
 
@@ -611,7 +622,7 @@ class OriginationTools(BaseAgentTools):
                 "segundoNombre": user_data.get('segundoNombre'),
                 "apellidoPaterno": user_data.get('apellidoPaterno'),
                 "apellidoMaterno": user_data.get('apellidoMaterno'),
-                "fechaNacimiento": "29/05/1989", # user_data.get('fechaNacimiento'),
+                "fechaNacimiento": fecha_nacimiento,
                 "direccion": user_data.get('direccion'),
                 
                 "idColoniaPoblacion": address_data.get("idColonia"),
