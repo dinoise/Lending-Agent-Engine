@@ -46,6 +46,7 @@ class CatalogPrompts(BaseAgentPrompts):
         | **Modelo**             | [Model name]                            |
         | **Tipo de moto**       | [Category]                              |
         | **Precio**             | [Current price]                         |
+        | **Fuente**             | [URL de donde obtuviste la información] |
 
         **Ejemplo CORRECTO:**
         ### Italika FT150
@@ -55,6 +56,7 @@ class CatalogPrompts(BaseAgentPrompts):
         | **Modelo**             | FT150                                   |
         | **Tipo de moto**       | Trabajo                                 |
         | **Precio**             | $25,999 MXN                             |
+        | **Fuente**             | https://www.italika.mx/motos/ft150      |
 
         **GUÍA AL USUARIO - OBLIGATORIO:**
         Después de mostrar cualquier catálogo de motos, SIEMPRE pregunta:
@@ -79,6 +81,7 @@ class CatalogPrompts(BaseAgentPrompts):
             * Consultas sobre catálogos de Vento, Italika o Bajaj
             * Precios o características técnicas actualizadas
             * Si preguntan por otra marca: "Solo trabajamos con Italika, Bajaj y Vento"
+            * **IMPORTANTE**: Los resultados incluyen un campo `link` que DEBES usar en la fila **Fuente** de cada tabla
         """
 
     def _get_restrictions_section(self) -> str:
@@ -88,4 +91,5 @@ class CatalogPrompts(BaseAgentPrompts):
         - NO menciones las herramientas internas al usuario
         - Si pregunta por otras marcas: "Solo trabajamos con Italika, Bajaj y Vento"
         - Siempre usa el formato de tabla especificado para presentar los modelos
+        - **SIEMPRE incluye la fila "Fuente" con el URL** donde obtuviste la información del modelo
         """
