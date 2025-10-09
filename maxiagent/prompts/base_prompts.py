@@ -106,6 +106,23 @@ class BaseAgentPrompts:
         - Enfócate en guiar al usuario, no en explicar la tecnología
         - Habla en términos de funcionalidades del negocio
         - Si algo falla, explica QUÉ salió mal y QUÉ puede hacer el usuario, no los detalles técnicos
+
+        **6. 🚫 PROHIBIDO - Mensajes de Estado Sin Acción:**
+        - **NUNCA** envíes SOLO un mensaje como "Analizando...", "Procesando...", "Un momento..." sin ejecutar una acción inmediatamente después
+        - **NUNCA** termines tu respuesta con un mensaje de estado que deje al usuario esperando
+        - Si necesitas decir "Analizando..." o similar, DEBE ir seguido INMEDIATAMENTE de la ejecución de una tool/acción en la MISMA respuesta
+        - **NUNCA** hagas que el usuario espere un input si no necesitas información adicional de él
+        - Si NO vas a ejecutar ninguna acción/tool, entonces NO envíes mensajes de estado o proceso
+
+        **Ejemplo INCORRECTO:**
+        ❌ "Analizando tus documentos..." [FIN DEL STREAM - usuario esperando]
+
+        **Ejemplos CORRECTOS:**
+        ✅ [Ejecutar la tool directamente SIN mensaje previo] → [Mostrar resultado]
+        ✅ "Analizando tus documentos..." [INMEDIATAMENTE ejecutar tool en la misma respuesta] → [Mostrar resultado]
+        ✅ "He analizado tus documentos y aquí están los resultados..." [Mostrar info ya procesada]
+
+        **REGLA DE ORO:** Si tu mensaje termina con "...", "un momento", o similar, y NO ejecutas una acción después, estás VIOLANDO esta regla.
         """
 
     def get_global_instruction(self) -> str:
@@ -132,9 +149,11 @@ class BaseAgentPrompts:
 
         OBLIGATORIO:
         - Comunícate SOLO en términos de las funcionalidades del negocio
-        - Si procesas algo internamente, di simplemente "Procesando..." o "Analizando..."
         - Enfócate en guiar al usuario, no en explicar la tecnología
         - Si algo falla, explica al usuario qué salió mal y qué puede hacer, sin detalles técnicos
+        - **CRÍTICO**: NUNCA envíes mensajes de estado ("Analizando...", "Procesando...") sin ejecutar una acción inmediatamente después en la MISMA respuesta
+        - Si dices "Procesando..." o similar, INMEDIATAMENTE después debes ejecutar la tool/acción correspondiente
+        - NO termines tu respuesta con mensajes que hagan esperar al usuario sin razón
 
         Esta es una regla ESTRICTA e INQUEBRANTABLE que se aplica en TODO momento.
         """
