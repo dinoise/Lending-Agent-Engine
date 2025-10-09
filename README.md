@@ -1,5 +1,46 @@
 # MaxiAgent - Multi-Agent Motorcycle Finance Engine
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Agent Details](#agent-details)
+- [Multi-Agent System Architecture](#multi-agent-system-architecture)
+  - [Root Coordinator Agent](#-root-coordinator-agent)
+  - [Credit Advice Agent](#-credit-advice-agent)
+  - [Catalog Agent](#-catalog-agent)
+  - [Origination Agent](#-origination-agent)
+  - [Image Analysis Agent](#-image-analysis-agent-sub-agent-of-origination)
+- [Key Features](#key-features)
+  - [Motorcycle Catalog Consultation](#️-motorcycle-catalog-consultation)
+  - [Credit Advisory Services](#-credit-advisory-services)
+  - [End-to-End Quotation Flow](#-end-to-end-quotation-flow)
+  - [Intelligent Document Analysis](#-intelligent-document-analysis)
+- [Core Capabilities](#core-capabilities)
+- [Setup and Installation](#setup-and-installation)
+  - [Prerequisites](#prerequisites)
+  - [Project Setup](#project-setup)
+- [Running the Agent](#running-the-agent)
+  - [Local Development](#local-development)
+  - [Example Interactions](#example-interactions)
+- [Deployment](#deployment)
+  - [Deploy to Vertex AI Agent Engine](#deploy-to-vertex-ai-agent-engine)
+  - [Deployment Commands](#deployment-commands)
+  - [Deployment Configuration](#deployment-configuration)
+  - [Environment Management](#environment-management)
+- [Development](#development)
+  - [Multi-Agent Project Structure](#multi-agent-project-structure)
+  - [Adding New Tools](#adding-new-tools)
+  - [Testing](#testing)
+- [Configuration](#configuration)
+- [Customization](#customization)
+  - [Modify Agent Behavior](#modify-agent-behavior)
+  - [Integrate Additional APIs](#integrate-additional-apis)
+- [Supported Motorcycle Brands](#supported-motorcycle-brands)
+- [Multi-Agent Benefits](#multi-agent-benefits)
+- [Disclaimer](#disclaimer)
+
+---
+
 ## Overview
 
 MaxiAgent is an AI-powered **multi-agent system** specialized in motorcycle financing for Maxikash. The system orchestrates multiple specialized agents to provide expert consultation on motorcycle credits, generate personalized quotations, and offer up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
