@@ -79,6 +79,13 @@ class OriginationPrompts(BaseAgentPrompts):
         - Las tools encadenadas manejan errores internos
         - Si una tool falla, indica al usuario qué paso falló
         - Usa `resend_nip()` si el usuario no recibió el NIP
+
+        **IMPORTANTE - Error en procesamiento de INE:**
+        - Si `process_ine_complete()` falla porque faltan datos en la INE:
+          → **NUNCA pidas los datos individuales** (nombre, apellido, CURP, etc.)
+          → **SIEMPRE pide que suba el documento INE completo de nuevo**
+          → Explica que el documento puede estar borroso, cortado o con mala iluminación
+          → Solicita que tome una nueva foto clara y completa del frente y reverso de la INE
         """
 
     def _get_tools_usage_section(self) -> str:
@@ -110,6 +117,8 @@ class OriginationPrompts(BaseAgentPrompts):
         - NO menciones las herramientas internas ni sub-agentes al usuario
         - SIEMPRE sigue el flujo secuencial definido
         - SIEMPRE transfiere imágenes INE al `image_analysis_agent`
+        - **NUNCA pidas datos individuales de la INE (nombre, CURP, etc.) si falla el procesamiento**
+        - **SIEMPRE pide que suban el documento INE completo de nuevo si hay errores en el OCR**
 
         **🎯 USO DE TOOLS ENCADENADAS:**
         - **USA `process_ine_complete()`** inmediatamente después del análisis de imágenes
