@@ -3,20 +3,54 @@ Base class for all agent prompts with global restrictions.
 This ensures consistent behavior across all agents.
 """
 
+from typing import Set
+
 
 class BaseAgentPrompts:
     """
     Base class that defines global instructions and restrictions
     that apply to ALL agents in the system.
 
-    All agent prompt classes should inherit from this class.
+    All agent prompt classes should inherit from this class and define
+    their _sections dictionary with at least the REQUIRED_SECTIONS.
     """
+
+    # Secciones obligatorias que todos los agentes deben tener
+    REQUIRED_SECTIONS: Set[str] = {
+        'role',                 # Objetivo principal del agente y cuándo actúa
+        'tools_usage',          # Herramientas disponibles y cuándo usarlas
+        'restrictions',         # Restricciones específicas del agente
+        'global_restrictions'   # Restricciones globales del sistema
+    }
 
     def __init__(self):
         self._sections = {}
+        self._validated = False
+
+    def _validate_sections(self):
+        """
+        Valida que todas las secciones requeridas estén presentes.
+
+        Raises:
+            ValueError: Si falta alguna sección obligatoria
+        """
+        if self._validated:
+            return
+
+        missing_sections = self.REQUIRED_SECTIONS - set(self._sections.keys())
+        if missing_sections:
+            raise ValueError(
+                f"Faltan secciones obligatorias en {self.__class__.__name__}: {missing_sections}. "
+                f"Secciones requeridas: {self.REQUIRED_SECTIONS}"
+            )
+        self._validated = True
 
     def get_full_prompt(self) -> str:
-        """Return the complete instruction prompt with all sections."""
+        """
+        Return the complete instruction prompt with all sections.
+        Validates that required sections are present before returning.
+        """
+        self._validate_sections()
         return "\n".join([section for section in self._sections.values() if section])
 
     def get_section(self, section_name: str) -> str:
