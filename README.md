@@ -4,8 +4,6 @@
 
 MaxiAgent is an AI-powered **multi-agent system** specialized in motorcycle financing for Maxikash. The system orchestrates multiple specialized agents to provide expert consultation on motorcycle credits, generate personalized quotations, and offer up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
 
-![RAG Architecture](RAG_architecture.png)
-
 The multi-agent engine combines Retrieval-Augmented Generation (RAG) technology with Google Cloud's Agent Development Kit to deliver comprehensive financial advisory services through specialized agents that handle different aspects of the customer journey.
 
 ## Agent Details
@@ -14,12 +12,12 @@ The multi-agent engine combines Retrieval-Augmented Generation (RAG) technology 
 | **Interaction Type** | Conversational                                                                                                                                                                                      |
 | **Complexity**    | Advanced Multi-Agent System
 | **Agent Type**    | **Multi-Agent Architecture** with Coordinator and Specialized Sub-Agents                                                                                                                                                                                        |
-| **Components**    | Root Coordinator, Credit Advisor, Catalog Consultant, Quotation Calculator, Session Manager                                                                                                                                                                               |
+| **Components**    | Root Coordinator, Credit Advisor, Catalog Consultant, Origination Specialist, Image Analysis Specialist                                                                                                                                                                               |
 | **Vertical**      | Financial Services - Motorcycle Financing                                                                                                               |
 
 ### Multi-Agent Architecture
 
-![RAG](RAG_workflow.png)
+![RAG](agent_workflow.png)
 
 ## Multi-Agent System Architecture
 
@@ -41,6 +39,7 @@ MaxiAgent operates as a **multi-agent engine** with a coordination layer that ma
   - Documentation guidance
   - Payment options and interest rates
   - Eligibility assessments
+- **Guidance**: Actively guides users toward quotation or catalog consultation
 
 ### 🏍️ **Catalog Agent**
 - **Specialization**: Motorcycle catalog consultation
@@ -48,66 +47,99 @@ MaxiAgent operates as a **multi-agent engine** with a coordination layer that ma
 - **Expertise**:
   - Italika, Bajaj, and Vento motorcycle catalogs
   - Current pricing and specifications
-  - Model recommendations by category
+  - Model recommendations by category (work, scooter, sports, tricycle, chopper, urban)
   - Technical specifications
+- **Guidance**: Suggests quotation when user shows interest in specific models
 
-### 📊 **Calculation Agent**
-- **Specialization**: Financial quotation generation
-- **Tools**: External API integration for loan calculations
-- **Expertise**:
-  - Personalized financing calculations
-  - Multiple payment plan options
-  - Real-time quote generation
+### 📋 **Origination Agent**
+- **Specialization**: Complete quotation flow from document capture to offer generation
+- **Sub-Agent**: Image Analysis Agent for INE document processing
+- **Tools**: Chained tools for automated multi-step processes
+- **Workflow**:
+  1. **Document Capture**: Analyzes INE (Mexican ID) images via Image Analysis sub-agent
+  2. **INE Processing**: Sends documents to API, validates CURP
+  3. **Data Collection**: Gathers user information (phone, email, motorcycle price)
+  4. **NIP Verification**: Requests and confirms 6-digit NIP (when required)
+  5. **Offer Generation**: Queries and presents personalized financing offers
+  6. **Offer Selection**: Processes user's chosen payment plan
+- **Advanced Features**:
+  - Conditional NIP flow (skips NIP when not required)
+  - Automatic error handling and retries
+  - Structured offer formatting with markdown tables
 
-### 💾 **Session Management Agent**
-- **Specialization**: Data collection and persistence
-- **Tools**: Session state management tools
-- **Expertise**:
-  - Client data collection and validation
-  - Session persistence across conversations
-  - Data completeness verification
-  - Privacy-focused data handling
+### 🔍 **Image Analysis Agent** (Sub-agent of Origination)
+- **Specialization**: Mexican ID (INE/IFE) document analysis
+- **Function**: Classifies INE images as FRONT or BACK
+- **Integration**: Called automatically by Origination Agent during quotation process
+- **Features**:
+  - Intelligent image classification
+  - Quality validation
+  - Saves classified images as artifacts
 
 ## Key Features
 
 ### 🏍️ **Motorcycle Catalog Consultation**
 - **Brand Coverage**: Italika, Bajaj, and Vento motorcycles
-- **Real-time Search**: Up-to-date pricing and specifications
-- **Category Filtering**: Work motorcycles, scooters, sports, tricycles, choppers, urban
+- **Real-time Search**: Up-to-date pricing and specifications via Google Custom Search
+- **Category Filtering**: Work, scooters, sports, tricycles, choppers, urban
 - **Detailed Information**: Technical specifications, pricing, and availability
+- **Smart Guidance**: Automatically suggests quotation when user shows interest
 
 ### 💰 **Credit Advisory Services**
-- **RAG-powered Responses**: Intelligent document retrieval for credit questions
+- **RAG-powered Responses**: Intelligent document retrieval from knowledge base
+- **Semantic Search**: Contextual search through credit documentation
 - **Financing Process**: Complete guidance on requirements and documentation
 - **Payment Options**: Information on terms, rates, and payment schedules
-- **Eligibility Assessment**: Professional consultation on credit options
+- **User Guidance**: Directs users to catalog or quotation based on needs
 
-### 📊 **Quotation Generation**
-- **Personalized Calculations**: Based on income, motorcycle price, and personal data
-- **Multiple Payment Plans**: Various financing options with different terms
-- **Session Management**: Persistent data storage during consultation
-- **Real-time Processing**: Instant calculation through external API integration
+### 📋 **End-to-End Quotation Flow**
+- **Document Processing**: Automated INE (Mexican ID) image analysis and classification
+- **CURP Validation**: Automatic validation through government data
+- **Chained Workflow**: Automated multi-step process with minimal user intervention
+- **Conditional Logic**: Smart NIP verification (only when required by the system)
+- **Multiple Offers**: Presents various financing options with different payment terms
+- **Structured Presentation**: Clean markdown tables with pricing breakdown
+- **Offer Selection**: Streamlined selection and confirmation process
 
-### 🔍 **Smart Session Management**
-- **Data Persistence**: Maintains client information throughout the conversation
-- **Status Tracking**: Monitors completeness of required data for quotations
-- **Flexible Input**: Handles various data formats and user input styles
-- **Privacy Focused**: Secure handling of personal financial information
+### 🔍 **Intelligent Document Analysis**
+- **INE Classification**: Automatic detection of front vs. back of Mexican ID
+- **Image Quality Validation**: Ensures documents are clear and readable
+- **Artifact Management**: Secure storage of processed document images
+- **Integration**: Seamless delegation from Origination to Image Analysis agent
 
 ## Core Capabilities
 
-### Tools Available:
-- **`semantic_search`**: RAG-based search for credit and financing information
-- **`google_web_search`**: Real-time web search for motorcycle catalogs
-- **`calculate_quotation`**: Financial calculation service for loan quotations
-- **Session Management Tools**: Data storage and retrieval for user information
+### Tools by Agent:
 
-### Required Data for Quotations:
-1. **Monthly Income** (`ingreso_mensual`)
-2. **Motorcycle Price** (`precio_moto`)
-3. **Birth Date** (`fecha_nacimiento`)
-4. **Motorcycle Brand** (`marca_moto`)
-5. **Motorcycle Model** (`modelo_moto`)
+#### Credit Advice Agent:
+- **`semantic_search`**: RAG-based contextual search through credit documentation
+
+#### Catalog Agent:
+- **`google_web_search`**: Real-time web search for motorcycle catalogs from official sites
+
+#### Origination Agent - Chained Tools:
+- **`process_ine_complete`**: Automated INE processing + CURP validation
+- **`complete_form_and_nip`**: Form submission + conditional NIP request
+- **`confirm_nip_and_get_offers`**: NIP confirmation (if required) + offer generation
+
+#### Origination Agent - Basic Tools:
+- **`initialize_flow`**: Starts new quotation process with unique UUID
+- **`resend_nip`**: Resends NIP code to user's phone
+- **`select_offer`**: Confirms user's selected financing plan
+
+#### Image Analysis Agent:
+- **`analyze_ine_document`**: Classifies INE image as FRONT or BACK
+- **`save_classified_image`**: Stores processed images as artifacts
+- **`validate_image_quality`**: Checks image clarity and readability
+
+### Quotation Flow Requirements:
+The Origination Agent automatically collects:
+1. **INE Images** (Front and Back) - via Image Analysis sub-agent
+2. **CURP** - Extracted and validated from INE
+3. **Phone Number** (`celular`)
+4. **Email** (`email`)
+5. **Motorcycle Price** (`precio_moto`) - Estimated price
+6. **NIP Code** (6 digits) - Only when required by the system
 
 ## Setup and Installation
 
@@ -206,21 +238,45 @@ MaxiAgent operates as a **multi-agent engine** with a coordination layer that ma
 **Credit Consultation:**
 ```
 User: ¿Qué documentos necesito para un crédito de moto?
-Agent: [Uses semantic_search to provide detailed documentation requirements]
+Agent: [Credit Advice Agent uses semantic_search to retrieve documentation requirements]
+       [Guides user toward catalog consultation or quotation]
 ```
 
 **Catalog Search:**
 ```
 User: ¿Qué motos de trabajo tiene Italika?
-Agent: [Uses google_web_search to find current Italika work motorcycles with pricing and specifications]
+Agent: [Catalog Agent uses google_web_search to find current Italika work motorcycles]
+       [Presents models with pricing in structured tables]
+       [Suggests quotation if user shows interest]
 ```
 
-**Quotation Generation:**
+**Complete Quotation Flow:**
 ```
 User: Quiero cotizar una moto
-Agent: Perfecto, necesito algunos datos para generar su cotización:
-        ¿Cuál es su ingreso mensual aproximado?
-[Collects data step by step and generates personalized financing options]
+Agent: [Origination Agent initializes flow]
+       Perfecto, por favor envía las fotos de tu INE (frente y reverso)
+
+User: [Sends INE images]
+Agent: [Delegates to Image Analysis Agent for classification]
+       [Automatically processes INE and validates CURP]
+       Necesito algunos datos adicionales:
+       - ¿Cuál es tu número de celular?
+       - ¿Tu correo electrónico?
+       - ¿Cuál es el precio estimado de la moto que te interesa?
+
+User: [Provides data]
+Agent: [Submits form and conditionally requests NIP]
+       [If NIP required] Revisa tu celular, te enviamos un código de 6 dígitos
+       [If NIP not required] Procesando...
+
+User: [Provides NIP if required]
+Agent: [Confirms NIP and generates offers]
+       [Presents multiple financing options in structured tables]
+       ¿Cuál opción prefieres?
+
+User: Opción 2
+Agent: [Confirms selection]
+       ¡Perfecto! Tu solicitud ha sido enviada a análisis.
 ```
 
 ## Deployment
@@ -254,13 +310,16 @@ maxiagent/
 ├── config/               # Environment and configuration management
 │   ├── __init__.py
 │   └── config.py
-├── prompts/              # Root coordinator prompts
+├── prompts/              # Prompt management system
 │   ├── __init__.py
-│   └── root_agent_prompts.py
-├── tools/                # Root coordinator tools (legacy compatibility)
+│   ├── base_prompts.py           # Base class with required sections validation
+│   ├── root_agent_prompts.py     # Root coordinator prompts
+│   └── SECTIONS_STANDARD.md      # Prompt sections standardization guide
+├── tools/                # Tool management system
 │   ├── __init__.py
-│   └── root_agent_tools.py
-├── sub_agent/            # Multi-agent system architecture
+│   ├── base_tools.py             # Base class for all agent tools
+│   └── root_agent_tools.py       # Root coordinator tools
+├── sub_agents/           # Multi-agent system architecture
 │   ├── __init__.py
 │   ├── credit_advice_agent/      # Credit and financing specialist
 │   │   ├── __init__.py
@@ -280,24 +339,24 @@ maxiagent/
 │   │   └── tools/
 │   │       ├── __init__.py
 │   │       └── catalog_tools.py
-│   ├── calculation_agent/        # Financial calculation specialist
+│   ├── origination_agent/        # Quotation flow specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
 │   │   ├── prompts/
 │   │   │   ├── __init__.py
-│   │   │   └── calculation_prompts.py
+│   │   │   └── origination_prompts.py
 │   │   └── tools/
 │   │       ├── __init__.py
-│   │       └── calculation_tools.py
-│   └── session_management_agent/ # Data collection specialist
+│   │       └── origination_tools.py  # Includes chained tools
+│   └── image_analysis_agent/     # INE document analysis specialist (sub-agent of Origination)
 │       ├── __init__.py
 │       ├── agent.py
 │       ├── prompts/
 │       │   ├── __init__.py
-│       │   └── session_management_prompts.py
+│       │   └── analysis_prompts.py
 │       └── tools/
 │           ├── __init__.py
-│           └── session_management_tools.py
+│           └── analysis_tools.py
 └── utils/                # Shared utility functions
     ├── __init__.py
     └── utils.py
@@ -306,12 +365,13 @@ maxiagent/
 ### Adding New Tools
 
 #### For Existing Agents:
-1. Add the tool function to the appropriate agent's tools file (e.g., `maxiagent/sub_agent/credit_advice_agent/tools/credit_advice_tools.py`)
-2. Register it in the agent's `_tools` dictionary
-3. Update the agent's prompt instructions in the corresponding prompts file
+1. Add the tool function to the appropriate agent's tools file (e.g., `maxiagent/sub_agents/credit_advice_agent/tools/credit_advice_tools.py`)
+2. Ensure the tools class inherits from `BaseAgentTools`
+3. Register it in the agent's `_tools` dictionary under an appropriate category
+4. Update the agent's prompt instructions in the corresponding prompts file
 
 #### For New Specialized Agents:
-1. Create a new agent directory under `maxiagent/sub_agent/`
+1. Create a new agent directory under `maxiagent/sub_agents/`
 2. Follow the established structure:
    ```
    new_agent/
@@ -319,13 +379,14 @@ maxiagent/
    ├── agent.py
    ├── prompts/
    │   ├── __init__.py
-   │   └── new_agent_prompts.py
+   │   └── new_agent_prompts.py  # Must inherit from BaseAgentPrompts
    └── tools/
        ├── __init__.py
-       └── new_agent_tools.py
+       └── new_agent_tools.py    # Must inherit from BaseAgentTools
    ```
-3. Import and register the new agent in `maxiagent/sub_agent/__init__.py`
-4. Add the agent to the root coordinator's sub_agents dictionary in `maxiagent/agent.py`
+3. Ensure prompts class includes all required sections (role, tools_usage, restrictions, global_restrictions)
+4. Import and register the new agent in `maxiagent/sub_agents/__init__.py`
+5. Add the agent to the root coordinator's sub_agents list in `maxiagent/agent.py`
 
 ### Testing
 
@@ -351,14 +412,25 @@ For RAG functionality, configure PostgreSQL with pgvector extension for embeddin
 #### Root Coordinator:
 - **Prompts**: Edit `maxiagent/prompts/root_agent_prompts.py` to change coordination behavior
 - **Configuration**: Adjust settings in `maxiagent/config/config.py`
+- **Global Instructions**: Modify `BaseAgentPrompts.get_global_instruction()` for system-wide behavior
 
 #### Specialized Agents:
-- **Credit Advice**: Modify `maxiagent/sub_agent/credit_advice_agent/prompts/credit_advice_prompts.py`
-- **Catalog Consultation**: Modify `maxiagent/sub_agent/catalog_agent/prompts/catalog_prompts.py`
-- **Financial Calculations**: Modify `maxiagent/sub_agent/calculation_agent/prompts/calculation_prompts.py`
-- **Session Management**: Modify `maxiagent/sub_agent/session_management_agent/prompts/session_management_prompts.py`
+- **Credit Advice**: Modify `maxiagent/sub_agents/credit_advice_agent/prompts/credit_advice_prompts.py`
+- **Catalog Consultation**: Modify `maxiagent/sub_agents/catalog_agent/prompts/catalog_prompts.py`
+- **Origination Flow**: Modify `maxiagent/sub_agents/origination_agent/prompts/origination_prompts.py`
+- **Image Analysis**: Modify `maxiagent/sub_agents/image_analysis_agent/prompts/analysis_prompts.py`
+
+#### Standardized Prompt Structure:
+All prompts must include required sections (validated automatically):
+- `role`: Agent's objective and when it acts
+- `tools_usage`: Available tools and when to use them
+- `restrictions`: Agent-specific restrictions
+- `global_restrictions`: System-wide restrictions (inherited)
+
+See `maxiagent/prompts/SECTIONS_STANDARD.md` for details.
 
 #### Tools:
+- **Base Classes**: All tools inherit from `BaseAgentTools` for consistency
 - **Distributed Tools**: Each agent has its own specialized tools in their respective `tools/` directories
 - **Shared Utilities**: Common functions are available in `maxiagent/utils/utils.py`
 
@@ -366,6 +438,7 @@ For RAG functionality, configure PostgreSQL with pgvector extension for embeddin
 - Add new API configurations to the config classes
 - Create corresponding tool functions in the appropriate specialized agent
 - Update the specific agent's prompts to include new capabilities
+- Ensure tools class inherits from `BaseAgentTools`
 - Consider creating a new specialized agent if the functionality is substantial enough
 
 ## Supported Motorcycle Brands
@@ -381,10 +454,14 @@ For other brands, the agent will redirect users to the supported options.
 The multi-agent architecture provides several advantages:
 
 - **Specialized Expertise**: Each agent focuses on a specific domain, providing more accurate and relevant responses
+- **Hierarchical Structure**: Sub-agents can have their own sub-agents (e.g., Image Analysis within Origination)
 - **Scalability**: New agents can be added without affecting existing functionality
-- **Maintainability**: Code is organized by functionality, making it easier to maintain and update
+- **Maintainability**: Code is organized by functionality with standardized base classes
 - **Performance**: Specialized agents can be optimized for their specific tasks
 - **Modularity**: Agents can be developed, tested, and deployed independently
+- **Standardization**: Base classes ensure consistent behavior across all agents
+- **Validation**: Automatic validation of prompts and tools ensures quality and consistency
+- **Chained Operations**: Complex workflows automated through chained tools (e.g., Origination flow)
 
 ## Disclaimer
 
