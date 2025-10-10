@@ -671,19 +671,19 @@ class OriginationTools(BaseAgentTools):
                     "message": f"Campos requeridos faltantes: {', '.join(all_missing_fields)}"
                 }
 
+            # Guardar datos del formulario en estado
+            tool_context.state['form_data'] = form_data
+
             api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
-            await self._call_originador_api(
+            offer_info: requests.Response = await self._call_originador_api(
                 api_url,
                 method='POST',
                 params=params,
                 json_data=form_data,
                 timeout=30
             )
-
-            # Guardar datos del formulario en estado
-            tool_context.state['form_data'] = form_data
 
             return {
                 "status": "success",
@@ -1044,6 +1044,8 @@ class OriginationTools(BaseAgentTools):
 
             selected_offer_data = response.json()
             del selected_offer_data['imagen_ofertabase64']
+
+            tool_context.state['selected_offer_data'] = selected_offer_data
 
             # Obtener datos del estado para enviar a n8n
             user_data = tool_context.state.get('user_data', {})
