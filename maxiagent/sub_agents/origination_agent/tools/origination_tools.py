@@ -1053,7 +1053,7 @@ class OriginationTools(BaseAgentTools):
 
             curp = user_data.get('curp', '')
             celular = form_data.get('celular', '')
-            email = form_data.get('correoElectronico', '')
+            email = form_data.get('email', '')
             primer_nombre = form_data.get('primerNombre', '')
             segundo_nombre = form_data.get('segundoNombre', '')
             primer_apellido = form_data.get('primerApellido', '')
