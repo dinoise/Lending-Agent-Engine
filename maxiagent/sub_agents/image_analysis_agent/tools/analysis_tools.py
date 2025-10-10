@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import time
 import base64
@@ -20,7 +21,6 @@ class ImageAnalysisTools(BaseAgentTools):
     def __init__(self):
         super().__init__()
         self._prompts = ImageAnalysisPrompts()
-        self._client = None  # Cliente Gen AI (se inicializa cuando se necesite)
         self._tools = {
             'analysis_tools': {
                 'analyze_ine_document': self.analyze_ine_document,
@@ -340,35 +340,36 @@ class ImageAnalysisTools(BaseAgentTools):
 
     def _get_genai_client(self) -> genai.Client:
         """
-        Obtiene o crea el cliente Gen AI configurado para Vertex AI.
+        Crea un nuevo cliente Gen AI configurado para Vertex AI.
+        Siempre crea una nueva instancia para evitar problemas con event loops cerrados.
 
         Returns:
             Cliente Gen AI configurado
         """
-        if self._client is None:
+        try:
+            # Siempre crear un cliente nuevo para evitar problemas con event loops cerrados
+            client = genai.Client(
+                vertexai=True,
+                project=current_config.PROJECT_ID,
+                location=current_config.LOCATION
+            )
+            print(f"🔧 Cliente Gen AI inicializado para proyecto {current_config.PROJECT_ID}")
+            return client
+        except Exception as e:
+            print(f"❌ Error inicializando cliente Gen AI: {e}")
+            # Fallback: intentar con variables de entorno
             try:
-                # Configurar cliente para usar Vertex AI
-                self._client = genai.Client(
-                    vertexai=True,
-                    project=current_config.PROJECT_ID,
-                    location=current_config.LOCATION
-                )
-                print(f"🔧 Cliente Gen AI inicializado para proyecto {current_config.PROJECT_ID}")
-            except Exception as e:
-                print(f"❌ Error inicializando cliente Gen AI: {e}")
-                # Fallback: intentar con variables de entorno
-                try:
-                    self._client = genai.Client(vertexai=True)
-                    print("🔧 Cliente Gen AI inicializado con variables de entorno")
-                except Exception as fallback_error:
-                    print(f"❌ Error en fallback: {fallback_error}")
-                    raise e
-
-        return self._client
+                client = genai.Client(vertexai=True)
+                print("🔧 Cliente Gen AI inicializado con variables de entorno")
+                return client
+            except Exception as fallback_error:
+                print(f"❌ Error en fallback: {fallback_error}")
+                raise e
 
     async def _analyze_image_with_model(self, image_data: bytes, mime_type: str = 'image/jpeg') -> dict:
         """
         Realiza el análisis real de imagen usando el nuevo Google Gen AI SDK.
+        Incluye retry logic para manejar errores de event loop cerrado.
 
         Args:
             image_data: Datos de la imagen
@@ -377,132 +378,190 @@ class ImageAnalysisTools(BaseAgentTools):
         Returns:
             Dict con resultado del análisis
         """
-        try:
-            model: str | None = current_config.ROOT_AGENT_MODEL
-            if not model:
-                return {
-                    "status": "error",
-                    "type": "unknown",
-                    "message": f"No model defined"
-                }
-            
-            client: genai.Client = self._get_genai_client()
+        max_retries = 2
+        retry_delay = 0.5  # segundos
 
-            analysis_prompt: str = self._prompts.get_ine_analysis_prompt()
+        for attempt in range(max_retries + 1):
+            try:
+                # Verificar y recrear event loop si está cerrado
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_closed():
+                        print(f"⚠️  Event loop cerrado detectado, creando nuevo loop (intento {attempt + 1})")
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                except RuntimeError:
+                    # No hay event loop en el thread actual
+                    print(f"⚠️  No hay event loop, creando uno nuevo (intento {attempt + 1})")
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
 
-            # Armando input para la llamada a la LLM
-            contents: types.ContentListUnion = [
-                types.Part.from_text(text=analysis_prompt),
-                types.Part.from_bytes(
-                    data=image_data,
-                    mime_type=mime_type
+                model: str | None = current_config.ROOT_AGENT_MODEL
+                if not model:
+                    return {
+                        "status": "error",
+                        "type": "unknown",
+                        "message": f"No model defined"
+                    }
+
+                # Crear un nuevo cliente en cada intento para evitar problemas
+                client: genai.Client = self._get_genai_client()
+
+                analysis_prompt: str = self._prompts.get_ine_analysis_prompt()
+
+                # Armando input para la llamada a la LLM
+                contents: types.ContentListUnion = [
+                    types.Part.from_text(text=analysis_prompt),
+                    types.Part.from_bytes(
+                        data=image_data,
+                        mime_type=mime_type
+                    )
+                ]
+
+                # Safety settings para documentos oficiales
+                safety_settings: List[types.SafetySetting] = [
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE
+                    ),
+                ]
+
+                print(f"🤖 Enviando imagen al modelo {model} para análisis (intento {attempt + 1})...")
+
+                # Usar la interfaz asíncrona del SDK
+                response: types.GenerateContentResponse = await client.aio.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        safety_settings=safety_settings,
+                        temperature=0.01
+                    )
                 )
-            ]
 
-            # Safety settings para documentos oficiales
-            safety_settings: List[types.SafetySetting] = [
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                    threshold=types.HarmBlockThreshold.BLOCK_NONE
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    threshold=types.HarmBlockThreshold.BLOCK_NONE
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                    threshold=types.HarmBlockThreshold.BLOCK_NONE
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                    threshold=types.HarmBlockThreshold.BLOCK_NONE
-                ),
-            ]
+                # Extraer correctamente el texto de la respuesta procesando todos los parts
+                if not response or not response.candidates:
+                    return {
+                        "status": "error",
+                        "type": "unknown",
+                        "message": "El modelo no proporcionó respuesta"
+                    }
 
-            print(f"🤖 Enviando imagen al modelo {model} para análisis...")
+                # Acceder a los parts de la primera candidate
+                candidate = response.candidates[0]
+                if not candidate.content or not candidate.content.parts:
+                    return {
+                        "status": "error",
+                        "type": "unknown",
+                        "message": "El modelo no proporcionó contenido"
+                    }
 
-            # Usar la interfaz asíncrona del SDK
-            response: types.GenerateContentResponse = await client.aio.models.generate_content(
-                model=model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    safety_settings=safety_settings,
-                    temperature=0.01
-                )
-            )
+                # Extraer solo los text parts, ignorando thought_signature y function_call
+                text_parts = []
+                for part in candidate.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        text_parts.append(part.text)
 
-            # Extraer correctamente el texto de la respuesta procesando todos los parts
-            if not response or not response.candidates:
+                if not text_parts:
+                    return {
+                        "status": "error",
+                        "type": "unknown",
+                        "message": "El modelo no proporcionó texto en la respuesta"
+                    }
+
+                # Concatenar todos los text parts
+                analysis_result = " ".join(text_parts).strip().upper()
+                print(f"📝 Respuesta del modelo: {analysis_result}")
+
+                # Mapear respuesta a formato esperado
+                if "FRENTE" in analysis_result:
+                    return {
+                        "status": "success",
+                        "type": "front",
+                        "confidence": "high",
+                        "analysis": analysis_result
+                    }
+
+                if "REVERSO" in analysis_result:
+                    return {
+                        "status": "success",
+                        "type": "back",
+                        "confidence": "high",
+                        "analysis": analysis_result
+                    }
+
+                if "INDETERMINADO" in analysis_result:
+                    return {
+                        "status": "uncertain",
+                        "type": "unknown",
+                        "confidence": "low",
+                        "analysis": analysis_result
+                    }
+
+                return {
+                        "status": "error",
+                        "type": "unknown",
+                        "analysis": analysis_result
+                    }
+
+            except RuntimeError as e:
+                # Manejo específico para errores de event loop
+                error_msg = str(e)
+                if "Event loop is closed" in error_msg or "no running event loop" in error_msg:
+                    print(f"⚠️  Error de event loop detectado: {error_msg}")
+                    if attempt < max_retries:
+                        print(f"🔄 Reintentando en {retry_delay}s... (intento {attempt + 2}/{max_retries + 1})")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        print(f"❌ Máximo de reintentos alcanzado para error de event loop")
+                        return {
+                            "status": "error",
+                            "type": "unknown",
+                            "message": f"Error de event loop después de {max_retries + 1} intentos: {error_msg}"
+                        }
+                else:
+                    # Otro tipo de RuntimeError
+                    print(f"❌ RuntimeError en análisis: {e}")
+                    return {
+                        "status": "error",
+                        "type": "unknown",
+                        "message": f"Error en análisis: {error_msg}"
+                    }
+
+            except Exception as e:
+                error_msg = str(e)
+                print(f"❌ Error en análisis con modelo Gen AI: {error_msg}")
+
+                # Reintentar para ciertos errores de red/timeout
+                if attempt < max_retries and any(keyword in error_msg.lower() for keyword in ["timeout", "connection", "network"]):
+                    print(f"🔄 Reintentando debido a error de red... (intento {attempt + 2}/{max_retries + 1})")
+                    await asyncio.sleep(retry_delay)
+                    continue
+
                 return {
                     "status": "error",
                     "type": "unknown",
-                    "message": "El modelo no proporcionó respuesta"
+                    "message": f"No se pudo obtener un resultado: {error_msg}"
                 }
 
-            # Acceder a los parts de la primera candidate
-            candidate = response.candidates[0]
-            if not candidate.content or not candidate.content.parts:
-                return {
-                    "status": "error",
-                    "type": "unknown",
-                    "message": "El modelo no proporcionó contenido"
-                }
-
-            # Extraer solo los text parts, ignorando thought_signature y function_call
-            text_parts = []
-            for part in candidate.content.parts:
-                if hasattr(part, 'text') and part.text:
-                    text_parts.append(part.text)
-
-            if not text_parts:
-                return {
-                    "status": "error",
-                    "type": "unknown",
-                    "message": "El modelo no proporcionó texto en la respuesta"
-                }
-
-            # Concatenar todos los text parts
-            analysis_result = " ".join(text_parts).strip().upper()
-            print(f"📝 Respuesta del modelo: {analysis_result}")
-
-            # Mapear respuesta a formato esperado
-            if "FRENTE" in analysis_result:
-                return {
-                    "status": "success",
-                    "type": "front",
-                    "confidence": "high",
-                    "analysis": analysis_result
-                }
-            
-            if "REVERSO" in analysis_result:
-                return {
-                    "status": "success",
-                    "type": "back",
-                    "confidence": "high",
-                    "analysis": analysis_result
-                }
-            
-            if "INDETERMINADO" in analysis_result:
-                return {
-                    "status": "uncertain",
-                    "type": "unknown",
-                    "confidence": "low",
-                    "analysis": analysis_result
-                }
-            
-            return {
-                    "status": "error",
-                    "type": "unknown",
-                    "analysis": analysis_result
-                }
-
-        except Exception as e:
-            print(f"❌ Error en análisis con modelo Gen AI: {e}")
-            return {
-                "status": "error",
-                "type": "unknown",
-                "message": "No se pudo obtener un resultado. Intente de nuevo."
-            }
+        # Si llegamos aquí, se agotaron todos los reintentos
+        return {
+            "status": "error",
+            "type": "unknown",
+            "message": "Se agotaron todos los reintentos para analizar la imagen"
+        }
 
     async def _save_image_artifact(
         self,
