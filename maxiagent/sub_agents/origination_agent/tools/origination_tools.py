@@ -595,17 +595,23 @@ class OriginationTools(BaseAgentTools):
                     "message": "Código postal no disponible en los datos del INE"
                 }
 
-            # En ocasiones, el OCR no puede obtener le fecha de nacimiento, entonces se obtiene
-            # del resultado de renapo
-            fecha_nacimiento = user_data.get('fechaNacimiento')
-            if not fecha_nacimiento:
-                curp_results = tool_context.state.get('curp_results', {})
-                renapo_details = curp_results.get('renapo_details', {})
-                res_renapo = renapo_details.get('responseRenapoDto', {})
-                fecha_nacimiento = res_renapo.get('fecha_nacimiento')
-
             # Obteniendo los datos de dirección
             address_data: dict = self._get_address_data(codigoPostal)
+
+            # En ocasiones, el OCR no puede obtener le fecha de nacimiento, entonces se obtiene
+            # del resultado de renapo
+            curp_results = tool_context.state.get('curp_results', {})
+            renapo_details = curp_results.get('renapo_details', {})
+            res_renapo = renapo_details.get('responseRenapoDto', {})
+            
+            # Obteniendo los datos personaes de renapo
+            fecha_nacimiento = res_renapo.get('fecha_nacimiento')
+            apellido_paterno = res_renapo.get('apellido_paterno')
+            apellido_materno = res_renapo.get('apellido_materno')
+            primer_nombre = res_renapo.get('primer_nombre')
+            segundo_nombre = res_renapo.get('segundo_nombre')
+            rfc = res_renapo.get('rfc')
+            curp = res_renapo.get('curp')
 
             # Validar que se obtuvieron los datos de dirección correctamente
             if not address_data.get('success', False):
@@ -617,12 +623,13 @@ class OriginationTools(BaseAgentTools):
             
             # Combinar datos del INE con datos adicionales
             form_data = {
-                "curp": user_data.get('curp'),
-                "primerNombre": user_data.get('primerNombre'),
-                "segundoNombre": user_data.get('segundoNombre'),
-                "apellidoPaterno": user_data.get('apellidoPaterno'),
-                "apellidoMaterno": user_data.get('apellidoMaterno'),
+                "primerNombre": primer_nombre,
+                "segundoNombre": segundo_nombre,
+                "apellidoPaterno": apellido_paterno,
+                "apellidoMaterno": apellido_materno,
                 "fechaNacimiento": fecha_nacimiento,
+                "curp": curp,
+                "rfc": rfc,
                 "direccion": user_data.get('direccion'),
                 
                 "idColoniaPoblacion": address_data.get("idColonia"),
@@ -638,16 +645,14 @@ class OriginationTools(BaseAgentTools):
 
                 "codigoPostal": codigoPostal,
                 
-                "rfc": user_data.get('rfc'),
                 "email": additional_data.get('correoElectronico'),
-
-                "numeroPromotor": "MaxiAgent",
+                "celular": additional_data.get('celular'),
 
                 "modeloMoto": additional_data.get('modeloMoto'),
                 "marcaMoto": additional_data.get('marcaMoto'),
                 "precioMoto": additional_data.get('precioMoto'),
-
-                "celular": additional_data.get('celular')
+                
+                "numeroPromotor": "MaxiAgent"
             }
 
             # Validar datos requeridos
