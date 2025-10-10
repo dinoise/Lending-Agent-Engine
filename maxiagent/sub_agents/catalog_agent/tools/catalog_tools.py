@@ -31,7 +31,7 @@ class CatalogTools(BaseAgentTools):
             res = service.cse().list(
                 q=query,
                 cx=current_config.GOOGLE_CSE_ID,
-                num=3  # Reducido de 5 a 3 para evitar respuestas muy grandes
+                num=3  # Reducido a 2 para evitar MAX_TOKENS
             ).execute()
 
             results = []
