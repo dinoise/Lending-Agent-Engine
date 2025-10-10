@@ -328,7 +328,7 @@ class OriginationTools(BaseAgentTools):
             print(f"   - ine_back_image tamaño: {len(ine_back) if ine_back else 0} chars")
             print(f"   - Errores de análisis: {len(analysis_errors)}")
 
-            if ine_front or ine_back:
+            if ine_front and ine_back:
                 api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
                 params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
