@@ -1056,10 +1056,10 @@ class OriginationTools(BaseAgentTools):
             email = form_data.get('email', '')
             primer_nombre = form_data.get('primerNombre', '')
             segundo_nombre = form_data.get('segundoNombre', '')
-            primer_apellido = form_data.get('primerApellido', '')
-            segundo_apellido = form_data.get('segundoApellido', '')
+            primer_apellido = form_data.get('apellidoPaterno', '')
+            segundo_apellido = form_data.get('apellidoMaterno', '')
             precio_moto = form_data.get('precioMoto', '')
-            direccion_ine = form_data.get('calle', '')
+            direccion_ine = form_data.get('direccion', '')
 
             # Convertir state a formato serializable
             serializable_state: Dict[str, Any] = {
