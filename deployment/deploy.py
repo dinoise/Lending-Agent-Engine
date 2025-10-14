@@ -179,7 +179,7 @@ class VertexAgentManager:
                 "display_name": display_name,
                 "env_vars": self.env_vars,
                 "extra_packages": ["./maxiagent"],
-                "min_instances": 1,  # Mantener instancia caliente
+                "min_instances": 0,  # Mantener instancia caliente
                 "max_instances": 10,  # Auto-scaling
             }
         )
