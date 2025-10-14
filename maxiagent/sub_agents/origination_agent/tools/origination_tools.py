@@ -1074,12 +1074,10 @@ class OriginationTools(BaseAgentTools):
                 'ine_back_image': tool_context.state.get('ine_back_image', '')
             }
 
-            conversation_metadata = tool_context.state.get('conversation_metadata', {})
-
-            print("conversation_metadata ", conversation_metadata)
-
-            user_id =conversation_metadata.get('user_id', '')
-            session_id = conversation_metadata.get('session_id', '')
+            # Obtener session_id y user_id nativamente del ToolContext
+            user_id = tool_context._invocation_context.session.user_id
+            session_id = tool_context._invocation_context.session.id
+            logger.info(f"Session info obtained from _invocation_context: user_id={user_id}, session_id={session_id}")
             
             # Preparar payload para n8n
             flow_payload = {
