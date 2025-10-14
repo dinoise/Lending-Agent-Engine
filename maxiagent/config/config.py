@@ -43,6 +43,8 @@ class DevelopmentConfig(Config):
     USRNAME_DATA_MAXI: str | None = getenv("USRNAME_DATA_MAXI_DEV")
     PASSWORD_DATA_MAXI: str | None = getenv("PASSWORD_DATA_MAXI_DEV")
 
+    AGENT_CHAT_URL: str | None = getenv("AGENT_CHAT_URL_DEV")
+
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE" if IS_NOT_LOCAL else "POSTGRE_IP_PUBLIC"
     PG_PORT = "POSTGRE_PORT"
@@ -65,6 +67,8 @@ class ProductionConfig(Config):
     USRNAME_DATA_MAXI: str | None = getenv("USRNAME_DATA_MAXI_PROD")
     PASSWORD_DATA_MAXI: str | None = getenv("PASSWORD_DATA_MAXI_PROD")
 
+    AGENT_CHAT_URL: str | None = getenv("AGENT_CHAT_URL_PROD")
+    
     # Configuration for PostgreSQL
     PG_HOST = "POSTGRE_IP_PRIVATE"
     PG_PORT = "POSTGRE_PORT"

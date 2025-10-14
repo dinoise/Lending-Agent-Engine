@@ -1074,6 +1074,13 @@ class OriginationTools(BaseAgentTools):
                 'ine_back_image': tool_context.state.get('ine_back_image', '')
             }
 
+            conversation_metadata = tool_context.state.get('conversation_metadata', {})
+
+            print("conversation_metadata ", conversation_metadata)
+
+            user_id =conversation_metadata.get('user_id', '')
+            session_id = conversation_metadata.get('session_id', '')
+            
             # Preparar payload para n8n
             flow_payload = {
                 **selected_offer_data,
@@ -1089,7 +1096,7 @@ class OriginationTools(BaseAgentTools):
                 "precio_moto": precio_moto,
                 "state": serializable_state,
                 "direccion_ine": direccion_ine,
-                "url_seguimiento": "google.com"
+                "url_seguimiento": f"{current_config.AGENT_CHAT_URL}/{user_id}/{session_id}"
             }
 
             # Realizar POST a Workflows

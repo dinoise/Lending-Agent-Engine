@@ -96,7 +96,8 @@ class VertexAgentManager:
                 "URL_DATA_MAXI_PROD",
                 "USRNAME_DATA_MAXI_PROD",
                 "PASSWORD_DATA_MAXI_PROD",
-                "ADK_ARTIFACT_BUCKET"
+                "ADK_ARTIFACT_BUCKET",
+                "AGENT_CHAT_URL_PROD"
             ]
         else:
             required_vars: list[str] = [
@@ -115,7 +116,8 @@ class VertexAgentManager:
                 "URL_DATA_MAXI_DEV",
                 "USRNAME_DATA_MAXI_DEV",
                 "PASSWORD_DATA_MAXI_DEV",
-                "ADK_ARTIFACT_BUCKET"
+                "ADK_ARTIFACT_BUCKET",
+                "AGENT_CHAT_URL_DEV"
             ]
 
         # Intentar cargar desde archivo .env
