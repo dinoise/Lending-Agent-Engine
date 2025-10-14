@@ -244,6 +244,29 @@ class VertexAgentManager:
             logger.error(f"Error actualizando .env file: {e}")
             raise
 
+def cleanup_logging():
+    """Cierra limpiamente todos los handlers de logging"""
+    logger.info("🧹 Cleaning up logging handlers...")
+
+    # Flush y cerrar todos los handlers
+    for handler in logging.root.handlers[:]:
+        try:
+            handler.flush()
+            handler.close()
+            logging.root.removeHandler(handler)
+        except Exception as e:
+            # Silenciar errores de cierre de handlers
+            pass
+
+    # También cerrar handlers del logger específico
+    for handler in logger.handlers[:]:
+        try:
+            handler.flush()
+            handler.close()
+            logger.removeHandler(handler)
+        except Exception as e:
+            pass
+
 def main() -> None:
     parser = argparse.ArgumentParser(description='Manage Vertex AI Agent Engines')
     parser.add_argument('--create', action='store_true', help='Create a new agent')
@@ -252,9 +275,9 @@ def main() -> None:
     parser.add_argument('--update', action='store_true', help='Update an agent')
     parser.add_argument('--resource-id', type=str, help='Agent resource ID')
     parser.add_argument('--env', type=str, help='Environment (dev or prod)')
-    
+
     args: argparse.Namespace = parser.parse_args()
-    
+
     # Configuración desde variables de entorno
     config = AgentConfig(
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
@@ -262,9 +285,9 @@ def main() -> None:
         staging_bucket=os.getenv("STAGING_BUCKET"),
         env=args.env
     )
-    
+
     manager = VertexAgentManager(config)
-    
+
     try:
         if args.create and args.display_name and args.env:
             manager.create_agent(args.display_name)
@@ -274,10 +297,16 @@ def main() -> None:
             manager.delete_agent(args.resource_id)
         else:
             logger.error("Comando no válido. Verifica los argumentos.")
+            cleanup_logging()
             sys.exit(1)
-            
+
+        # Limpieza exitosa
+        cleanup_logging()
+        sys.exit(0)
+
     except Exception as e:
         logger.error(f"Operación fallida: {str(e)}")
+        cleanup_logging()
         sys.exit(1)
 
 if __name__ == "__main__":
