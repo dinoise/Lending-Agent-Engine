@@ -3,7 +3,7 @@ import json
 
 from typing import Any, Dict
 
-from ....config import current_config
+from ....core import settings
 from ....tools.base_tools import BaseAgentTools
 
 
@@ -45,7 +45,7 @@ class CreditAdviceTools(BaseAgentTools):
 
         try:
             response: requests.Response = requests.post(
-                url=current_config.API_MAXIKASH + "/api/semantic-search",
+                url=settings.API_MAXIKASH + "/api/semantic-search",
                 json=data,
                 timeout=30
             )

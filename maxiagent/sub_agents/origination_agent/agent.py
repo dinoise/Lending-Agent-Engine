@@ -1,6 +1,6 @@
 from .prompts import OriginationPrompts
 from .tools import OriginationTools
-from ...config import current_config
+from ...core import settings
 from google.genai import types
 
 from google.adk.agents import Agent
@@ -11,7 +11,7 @@ prompts = OriginationPrompts()
 tools = OriginationTools()
 
 origination_agent = Agent(
-    model=current_config.ROOT_AGENT_MODEL,
+    model=settings.ROOT_AGENT_MODEL,
     name='origination_agent',
     instruction=prompts.get_full_prompt(),
     tools=tools.get_all_tools(),

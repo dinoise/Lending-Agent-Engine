@@ -62,6 +62,7 @@ jobs:
           USRNAME_DATA_MAXI_PROD: ${{ secrets.USRNAME_DATA_MAXI_PROD }}
           PASSWORD_DATA_MAXI_PROD: ${{ secrets.PASSWORD_DATA_MAXI_PROD }}
           AGENT_CHAT_URL_PROD: ${{ secrets.AGENT_CHAT_URL_PROD }}
+          CLOUD_VAR: true
 
         run: |
           echo "🚀 Iniciando despliegue en producción..."
@@ -91,6 +92,7 @@ jobs:
           USRNAME_DATA_MAXI_DEV: ${{ secrets.USRNAME_DATA_MAXI_DEV }}
           PASSWORD_DATA_MAXI_DEV: ${{ secrets.PASSWORD_DATA_MAXI_DEV }}
           AGENT_CHAT_URL_DEV: ${{ secrets.AGENT_CHAT_URL_DEV }}
+          CLOUD_VAR: true
 
         run: |
           echo "🚀 Iniciando despliegue en desarrollo..."

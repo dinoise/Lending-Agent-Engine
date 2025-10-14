@@ -6,7 +6,7 @@ logging.getLogger('google.genai.types').setLevel(logging.ERROR)
 
 from .prompts import RootAgentPrompts
 from .tools import RootAgentTools
-from .config import current_config
+from .core import settings
 
 # Import sub-agents
 from .sub_agents import (credit_advice_agent,
@@ -20,7 +20,7 @@ prompts = RootAgentPrompts()
 tools = RootAgentTools()
 
 root_agent = Agent(
-    model=current_config.ROOT_AGENT_MODEL,
+    model=settings.ROOT_AGENT_MODEL,
     name='maxiagent',
     instruction=prompts.get_full_prompt(),
     global_instruction=prompts.get_global_instruction(),

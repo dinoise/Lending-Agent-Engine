@@ -9,7 +9,7 @@ from google.genai import types
 
 from google.adk.tools.tool_context import ToolContext
 from ..prompts.analysis_prompts import ImageAnalysisPrompts
-from ....config import current_config
+from ....core import settings
 from ....tools.base_tools import BaseAgentTools
 
 # Safety settings se configuran usando enums del nuevo Google Gen AI SDK
@@ -350,10 +350,10 @@ class ImageAnalysisTools(BaseAgentTools):
             # Siempre crear un cliente nuevo para evitar problemas con event loops cerrados
             client = genai.Client(
                 vertexai=True,
-                project=current_config.PROJECT_ID,
-                location=current_config.LOCATION
+                project=settings.PROJECT_ID,
+                location=settings.LOCATION
             )
-            print(f"🔧 Cliente Gen AI inicializado para proyecto {current_config.PROJECT_ID}")
+            print(f"🔧 Cliente Gen AI inicializado para proyecto {settings.PROJECT_ID}")
             return client
         except Exception as e:
             print(f"❌ Error inicializando cliente Gen AI: {e}")
@@ -396,7 +396,7 @@ class ImageAnalysisTools(BaseAgentTools):
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
 
-                model: str | None = current_config.ROOT_AGENT_MODEL
+                model: str | None = settings.ROOT_AGENT_MODEL
                 if not model:
                     return {
                         "status": "error",

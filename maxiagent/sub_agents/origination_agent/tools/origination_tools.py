@@ -9,7 +9,7 @@ from requests.auth import HTTPBasicAuth
 from typing import List, Dict, Any
 
 from google.adk.tools.tool_context import ToolContext
-from ....config import current_config
+from ....core import settings
 from ....tools.base_tools import BaseAgentTools
 
 logger = logging.getLogger(__name__)
@@ -263,7 +263,7 @@ class OriginationTools(BaseAgentTools):
             Dict con el UUID del flujo o error
         """
         try:
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/nuevo-flujo"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/nuevo-flujo"
 
             response = await self._call_originador_api(api_url, method='GET')
 
@@ -329,7 +329,7 @@ class OriginationTools(BaseAgentTools):
             print(f"   - Errores de análisis: {len(analysis_errors)}")
 
             if ine_front and ine_back:
-                api_url: str = f"{current_config.URL_ORIGINADOR}/originacion/subir-ine"
+                api_url: str = f"{settings.URL_ORIGINADOR}/originacion/subir-ine"
                 params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
                 payload: Dict[str, str] = {
@@ -428,7 +428,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "Flujo no inicializado"
                 }
             
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/estatus-ine"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/estatus-ine"
             params = {"uuidFlujo": flow_uuid}
 
             for attempt in range(max_retries):
@@ -519,7 +519,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "Flujo no inicializado."
                 }
             
-            api_base: str | None = current_config.URL_ORIGINADOR
+            api_base: str | None = settings.URL_ORIGINADOR
             if not api_base:
                 return {
                     "status": "error",
@@ -674,7 +674,7 @@ class OriginationTools(BaseAgentTools):
             # Guardar datos del formulario en estado
             tool_context.state['form_data'] = form_data
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/capturar-formulario"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/capturar-formulario"
             params: Dict[str, str] = {"uuidFlujo": flow_uuid}
 
             offer_info: requests.Response = await self._call_originador_api(
@@ -729,7 +729,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "Formulario no enviado. Ejecuta submit_form_data primero."
                 }
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/pedir-nip"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/pedir-nip"
             params = {"uuidFlujo": flow_uuid}
 
             response: requests.Response = await self._call_originador_api(
@@ -804,7 +804,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "NIP debe ser un número de 6 dígitos."
                 }
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/confirmar-nip"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/confirmar-nip"
             params = {
                 "uuidFlujo": flow_uuid,
                 "nip": nip
@@ -863,7 +863,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "Debes solicitar un NIP primero usando send_nip."
                 }
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/reenviar-nip"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/reenviar-nip"
             params = {"uuidFlujo": flow_uuid}
 
             await self._call_originador_api(
@@ -926,7 +926,7 @@ class OriginationTools(BaseAgentTools):
                     "message": "NIP no confirmado. Confirma el NIP usando confirm_nip primero."
                 }
 
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/consultar-ofertas"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/consultar-ofertas"
             params = {
                 "uuidFlujo": flow_uuid
             }
@@ -1029,7 +1029,7 @@ class OriginationTools(BaseAgentTools):
             tool_context.state['selected_plazo'] = plazo_selected
 
             # Realizar la selección de la oferta
-            api_url = f"{current_config.URL_ORIGINADOR}/originacion/seleccionar-oferta"
+            api_url = f"{settings.URL_ORIGINADOR}/originacion/seleccionar-oferta"
             params = {
                 "uuidFlujo": flow_uuid,
                 "plazo": plazo_selected
@@ -1096,12 +1096,12 @@ class OriginationTools(BaseAgentTools):
                 "precio_moto": precio_moto,
                 "state": serializable_state,
                 "direccion_ine": direccion_ine,
-                "url_seguimiento": f"{current_config.AGENT_CHAT_URL}/{user_id}/{session_id}"
+                "url_seguimiento": f"{settings.AGENT_CHAT_URL}/{user_id}/{session_id}"
             }
 
             # Realizar POST a Workflows
             try:
-                flow_url: str = f"{current_config.API_MAXIKASH}/api/trigger-workflow"
+                flow_url: str = f"{settings.API_MAXIKASH}/api/trigger-workflow"
                 n8n_response: requests.Response = requests.post(
                     url=flow_url,
                     json=flow_payload,
@@ -1227,7 +1227,7 @@ class OriginationTools(BaseAgentTools):
         """
         headers = {
             'User-Agent': 'Python-HTTP-Post-Client/1.0',
-            'X-API-KEY': current_config.KEY_ORIGINADOR,
+            'X-API-KEY': settings.KEY_ORIGINADOR,
         }
 
         loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
@@ -1445,9 +1445,9 @@ class OriginationTools(BaseAgentTools):
 
             # Validar configuración requerida
             required_configs = [
-                ('URL_DATA_MAXI', current_config.URL_DATA_MAXI),
-                ('USRNAME_DATA_MAXI', current_config.USRNAME_DATA_MAXI),
-                ('PASSWORD_DATA_MAXI', current_config.PASSWORD_DATA_MAXI)
+                ('URL_DATA_MAXI', settings.URL_DATA_MAXI),
+                ('USRNAME_DATA_MAXI', settings.USRNAME_DATA_MAXI),
+                ('PASSWORD_DATA_MAXI', settings.PASSWORD_DATA_MAXI)
             ]
 
             for config_name, config_value in required_configs:
@@ -1458,7 +1458,7 @@ class OriginationTools(BaseAgentTools):
                     }
 
             # Configurar la URL y credenciales
-            url = f"{current_config.URL_DATA_MAXI}/sepomex/obtenerdireccion/completa"
+            url = f"{settings.URL_DATA_MAXI}/sepomex/obtenerdireccion/completa"
 
             # Preparar los datos para el POST
             data: Dict[str, str] = {
@@ -1476,7 +1476,7 @@ class OriginationTools(BaseAgentTools):
                 url=url,
                 json=data,
                 headers=headers,
-                auth=HTTPBasicAuth(current_config.USRNAME_DATA_MAXI, current_config.PASSWORD_DATA_MAXI),
+                auth=HTTPBasicAuth(settings.USRNAME_DATA_MAXI, settings.PASSWORD_DATA_MAXI),
                 timeout=30
             )
 

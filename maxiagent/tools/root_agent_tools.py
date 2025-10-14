@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict
 
-from ..config import current_config
+from ..core import settings
 from ..utils import get_page_content
 from .base_tools import BaseAgentTools
 
@@ -47,10 +47,10 @@ class RootAgentTools(BaseAgentTools):
         Returns:
             dict: Resultados de la búsqueda con título, enlace y snippet
         """
-        service = build("customsearch", "v1", developerKey=current_config.GOOGLE_SEARCH_API_KEY)
+        service = build("customsearch", "v1", developerKey=settings.GOOGLE_SEARCH_API_KEY)
         res = service.cse().list(
             q=query,
-            cx=current_config.GOOGLE_CSE_ID,
+            cx=settings.GOOGLE_CSE_ID,
             num=5
         ).execute()
         
@@ -141,7 +141,7 @@ class RootAgentTools(BaseAgentTools):
         headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'Python-HTTP-Post-Client/1.0',
-            'Authorization': current_config.KEY_CALCULADORA,
+            'Authorization': settings.KEY_CALCULADORA,
             'usuario': ''
         }
 
@@ -162,10 +162,10 @@ class RootAgentTools(BaseAgentTools):
             "idOferta": "111",
             "idPais": "MX"
         }
-        
+
         try:
             response: requests.Response = requests.post(
-                url=current_config.URL_CALCULADORA,
+                url=settings.URL_CALCULADORA,
                 json=data,
                 headers=headers,
                 timeout=30
@@ -207,7 +207,7 @@ class RootAgentTools(BaseAgentTools):
         
         try:
             response: requests.Response = requests.post(
-                url=current_config.API_MAXIKASH + "/api/semantic-search",
+                url=settings.API_MAXIKASH + "/api/semantic-search",
                 json=data,
                 timeout=30
             )

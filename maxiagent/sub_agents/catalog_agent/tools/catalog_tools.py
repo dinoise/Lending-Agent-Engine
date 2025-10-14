@@ -1,4 +1,4 @@
-from ....config import current_config
+from ....core import settings
 from ....utils import get_page_content
 from ....tools.base_tools import BaseAgentTools
 
@@ -27,10 +27,10 @@ class CatalogTools(BaseAgentTools):
             dict: Resultados de la búsqueda con título, enlace y snippet
         """
         try:
-            service = build("customsearch", "v1", developerKey=current_config.GOOGLE_SEARCH_API_KEY)
+            service = build("customsearch", "v1", developerKey=settings.GOOGLE_SEARCH_API_KEY)
             res = service.cse().list(
                 q=query,
-                cx=current_config.GOOGLE_CSE_ID,
+                cx=settings.GOOGLE_CSE_ID,
                 num=3  # Reducido a 2 para evitar MAX_TOKENS
             ).execute()
 
