@@ -1074,11 +1074,18 @@ class OriginationTools(BaseAgentTools):
                 'ine_back_image': tool_context.state.get('ine_back_image', '')
             }
 
-            # Obtener session_id y user_id nativamente del ToolContext
-            user_id = tool_context._invocation_context.session.user_id
-            session_id = tool_context._invocation_context.session.id
-            logger.info(f"Session info obtained from _invocation_context: user_id={user_id}, session_id={session_id}")
-            
+            try:
+                # Obtener session_id y user_id nativamente del ToolContext
+                user_id = tool_context._invocation_context.session.user_id
+                session_id = tool_context._invocation_context.session.id
+                logger.info(f"Session info obtained from _invocation_context: user_id={user_id}, session_id={session_id}")
+            except (AttributeError, KeyError) as e:
+                # Fallback si no está disponible (ej: desarrollo local)
+                conversation_metadata = tool_context.state.get('conversation_metadata', {})
+                user_id = conversation_metadata.get('user_id', '')
+                session_id = conversation_metadata.get('session_id', '')
+                logger.warning(f"Using fallback for session info from state - _invocation_context not available: {e}")
+
             # Preparar payload para n8n
             flow_payload = {
                 **selected_offer_data,
