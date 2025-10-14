@@ -429,45 +429,51 @@ Always specify `--env` when creating or updating agents to ensure correct config
 ## Development
 
 ### Multi-Agent Project Structure
+
 ```
 maxiagent/
 ├── __init__.py
-├── agent.py              # Root coordinator agent configuration
-├── core/                 # Core system components
+├── agent.py                                    # 🎯 Root coordinator agent
+│
+├── core/                                       # ⚙️ Core system components
 │   ├── __init__.py
-│   ├── config.py         # Environment and configuration management
-│   └── logging.py        # Logging configuration and utilities
-├── prompts/              # Prompt management system
+│   ├── config.py                              # Environment & configuration
+│   └── logging.py                             # Logging utilities
+│
+├── prompts/                                    # 💬 Prompt management
 │   ├── __init__.py
-│   ├── base_prompts.py           # Base class with required sections validation
-│   └── root_agent_prompts.py     # Root coordinator prompts
-├── tools/                # Tool management system
+│   ├── base_prompts.py                        # Base class with validation
+│   └── root_agent_prompts.py                  # Root coordinator prompts
+│
+├── tools/                                      # 🛠️ Tool management
 │   ├── __init__.py
-│   ├── base_tools.py             # Base class for all agent tools
-│   └── root_agent_tools.py       # Root coordinator tools
-├── sub_agents/           # Multi-agent system architecture
+│   ├── base_tools.py                          # Base class for all tools
+│   └── root_agent_tools.py                    # Root coordinator tools
+│
+├── sub_agents/                                 # 🤖 Multi-agent architecture
 │   ├── __init__.py
-│   ├── credit_advice_agent/      # Credit and financing specialist
+│   │
+│   ├── credit_advice_agent/                   # 🏦 Credit & financing specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
 │   │   ├── prompts/
 │   │   │   ├── __init__.py
 │   │   │   └── credit_advice_prompts.py
-│   │   ├── tools/
-│   │   │   ├── __init__.py
-│   │   │   └── credit_advice_tools.py
-│   │   └── utils/                # Agent-specific utilities (if needed)
-│   ├── catalog_agent/            # Motorcycle catalog specialist
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       └── credit_advice_tools.py         # RAG semantic search
+│   │
+│   ├── catalog_agent/                         # 🏍️ Motorcycle catalog specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
 │   │   ├── prompts/
 │   │   │   ├── __init__.py
 │   │   │   └── catalog_prompts.py
-│   │   ├── tools/
-│   │   │   ├── __init__.py
-│   │   │   └── catalog_tools.py
-│   │   └── utils/                # Agent-specific utilities (if needed)
-│   ├── origination_agent/        # Quotation flow specialist
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       └── catalog_tools.py               # Web search integration
+│   │
+│   ├── origination_agent/                     # 📋 Quotation flow specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
 │   │   ├── prompts/
@@ -475,8 +481,9 @@ maxiagent/
 │   │   │   └── origination_prompts.py
 │   │   └── tools/
 │   │       ├── __init__.py
-│   │       └── origination_tools.py  # Includes chained tools
-│   └── image_analysis_agent/     # INE document analysis specialist (sub-agent of Origination)
+│   │       └── origination_tools.py           # Chained workflow tools
+│   │
+│   └── image_analysis_agent/                  # 🔍 INE document specialist
 │       ├── __init__.py
 │       ├── agent.py
 │       ├── prompts/
@@ -484,11 +491,22 @@ maxiagent/
 │       │   └── analysis_prompts.py
 │       └── tools/
 │           ├── __init__.py
-│           └── analysis_tools.py
-└── utils/                # Shared utility functions
+│           └── analysis_tools.py              # Image classification
+│
+└── utils/                                      # 🔧 Shared utilities
     ├── __init__.py
     └── utils.py
 ```
+
+**Architecture Overview:**
+
+| Component | Description | Key Features |
+|-----------|-------------|--------------|
+| **🎯 Root Agent** | Orchestrates all sub-agents | Routing, context management, coordination |
+| **🏦 Credit Advice** | Financial consultation | RAG semantic search, documentation guidance |
+| **🏍️ Catalog Agent** | Motorcycle information | Real-time web search, brand catalogs |
+| **📋 Origination** | Quotation workflow | Chained tools, automated multi-step flow |
+| **🔍 Image Analysis** | Document processing | INE classification, quality validation |
 
 ### Adding New Tools
 
