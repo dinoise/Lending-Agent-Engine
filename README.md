@@ -431,15 +431,16 @@ Always specify `--env` when creating or updating agents to ensure correct config
 ### Multi-Agent Project Structure
 ```
 maxiagent/
+├── __init__.py
 ├── agent.py              # Root coordinator agent configuration
-├── config/               # Environment and configuration management
+├── core/                 # Core system components
 │   ├── __init__.py
-│   └── config.py
+│   ├── config.py         # Environment and configuration management
+│   └── logging.py        # Logging configuration and utilities
 ├── prompts/              # Prompt management system
 │   ├── __init__.py
 │   ├── base_prompts.py           # Base class with required sections validation
-│   ├── root_agent_prompts.py     # Root coordinator prompts
-│   └── SECTIONS_STANDARD.md      # Prompt sections standardization guide
+│   └── root_agent_prompts.py     # Root coordinator prompts
 ├── tools/                # Tool management system
 │   ├── __init__.py
 │   ├── base_tools.py             # Base class for all agent tools
@@ -452,18 +453,20 @@ maxiagent/
 │   │   ├── prompts/
 │   │   │   ├── __init__.py
 │   │   │   └── credit_advice_prompts.py
-│   │   └── tools/
-│   │       ├── __init__.py
-│   │       └── credit_advice_tools.py
+│   │   ├── tools/
+│   │   │   ├── __init__.py
+│   │   │   └── credit_advice_tools.py
+│   │   └── utils/                # Agent-specific utilities (if needed)
 │   ├── catalog_agent/            # Motorcycle catalog specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
 │   │   ├── prompts/
 │   │   │   ├── __init__.py
 │   │   │   └── catalog_prompts.py
-│   │   └── tools/
-│   │       ├── __init__.py
-│   │       └── catalog_tools.py
+│   │   ├── tools/
+│   │   │   ├── __init__.py
+│   │   │   └── catalog_tools.py
+│   │   └── utils/                # Agent-specific utilities (if needed)
 │   ├── origination_agent/        # Quotation flow specialist
 │   │   ├── __init__.py
 │   │   ├── agent.py
@@ -536,7 +539,8 @@ For RAG functionality, configure PostgreSQL with pgvector extension for embeddin
 
 #### Root Coordinator:
 - **Prompts**: Edit `maxiagent/prompts/root_agent_prompts.py` to change coordination behavior
-- **Configuration**: Adjust settings in `maxiagent/config/config.py`
+- **Configuration**: Adjust settings in `maxiagent/core/config.py`
+- **Logging**: Configure logging behavior in `maxiagent/core/logging.py`
 - **Global Instructions**: Modify `BaseAgentPrompts.get_global_instruction()` for system-wide behavior
 
 #### Specialized Agents:
@@ -552,7 +556,7 @@ All prompts must include required sections (validated automatically):
 - `restrictions`: Agent-specific restrictions
 - `global_restrictions`: System-wide restrictions (inherited)
 
-See `maxiagent/prompts/SECTIONS_STANDARD.md` for details.
+See `SECTIONS_STANDARD.md` in the project root for details.
 
 #### Tools:
 - **Base Classes**: All tools inherit from `BaseAgentTools` for consistency
