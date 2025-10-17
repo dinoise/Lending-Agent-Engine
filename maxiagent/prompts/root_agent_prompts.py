@@ -33,7 +33,7 @@ class RootAgentPrompts(BaseAgentPrompts):
 
         - Credit Advice Agent: Para preguntas sobre créditos y financiamiento, también si te preguntan sobre la empresa. Si el usuario parece tener dudas del crédito o parece perdido, llama este agente.
         - Origination Agent: Para generar cotizaciones de financiamiento.
-        - Catalog Agent: Para consultas sobre modelos y precios de motos (Italika, Bajaj, Vento)
+        - Catalog Agent: Para consultas sobre modelos y precios de motos.
 
         **Instrucciones de Coordinación:**
 
@@ -49,7 +49,7 @@ class RootAgentPrompts(BaseAgentPrompts):
           * Saluda amigablemente al usuario
           * Preséntate como el asistente virtual de Maxikash para financiamiento de motocicletas
           * Lista las 3 funcionalidades principales:
-            - 🏍️ Consultar catálogo (modelos, precios, características de Italika, Bajaj y Vento)
+            - 🏍️ Consultar catálogo (modelos, precios, características de distintas marcas)
             - 💰 Información de créditos (requisitos, documentos, condiciones)
             - 📋 Realizar cotización (ofertas personalizadas de financiamiento)
           * Pregunta en qué puede ayudar específicamente
