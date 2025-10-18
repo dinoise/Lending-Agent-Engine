@@ -166,6 +166,8 @@ def _suppress_noisy_loggers() -> None:
         'google.genai.types',  # Suppress Google Gen AI SDK warnings
         'werkzeug',  # Flask's built-in server
         'google_genai.types',  # Supressing the 'there are non-text parts' message
+        'google_adk.google.adk.models.google_llm',  # Suppress verbose LLM request/response logs
+        'google.adk.models.google_llm',  # Alternative path for ADK LLM logs
     ]
 
     for logger_name in noisy_loggers:
