@@ -12,7 +12,8 @@ from google.adk.tools.tool_context import ToolContext
 from ....core import settings
 from ....tools.base_tools import BaseAgentTools
 
-logger = logging.getLogger(__name__)
+from ....core import get_logger
+logger: logging.Logger = get_logger(__name__)
 
 
 class OriginationTools(BaseAgentTools):
@@ -47,6 +48,7 @@ class OriginationTools(BaseAgentTools):
         self._tools = {
             'chained_tools': {
                 'process_ine_complete': self.process_ine_complete,
+                'validate_curp_only': self.validate_curp_only,
                 'complete_form_and_nip': self.complete_form_and_nip,
                 'confirm_nip_and_get_offers': self.confirm_nip_and_get_offers
             },
@@ -126,6 +128,113 @@ class OriginationTools(BaseAgentTools):
             return {
                 "status": "error",
                 "message": f"Error inesperado en proceso de INE: {str(e)}"
+            }
+
+    async def validate_curp_only(self, tool_context: ToolContext, curp: str) -> dict:
+        """
+        TOOL ENCADENADA: Valida CURP directamente sin requerir INE.
+
+        Esta tool permite continuar el proceso de cotización usando solo CURP,
+        saltando completamente el procesamiento de documentos INE.
+
+        Pasos que ejecuta:
+        1. Valida formato de CURP
+        2. Valida CURP contra lista negra, ofertas activas y RENAPO
+        3. Obtiene datos personales de RENAPO (nombre, apellidos, fecha nacimiento, RFC)
+        4. Guarda los datos en el estado para uso posterior
+
+        Args:
+            curp: CURP de 18 caracteres del usuario
+
+        Returns:
+            Dict con resultado de la validación y datos obtenidos de RENAPO
+        """
+        logger.info("🔗 Iniciando validación solo con CURP (sin INE)")
+
+        try:
+            # Validar que existe flow_uuid
+            flow_uuid = tool_context.state.get('flow_uuid')
+            if not flow_uuid:
+                return {
+                    "status": "error",
+                    "message": "Flujo no inicializado. Ejecuta initialize_flow primero."
+                }
+
+            # Paso 1: Validar formato de CURP
+            logger.info("📝 Paso 1: Validando formato de CURP...")
+            format_validation = self._validate_curp_format(curp)
+
+            if not format_validation.get('valid', False):
+                return {
+                    "status": "error",
+                    "step": "format_validation",
+                    "message": f"Formato de CURP inválido: {format_validation.get('message')}"
+                }
+
+            curp_upper = curp.upper()
+
+            # Paso 2: Validar CURP (lista negra, ofertas activas, RENAPO)
+            logger.info("✅ Paso 2: Validando CURP contra servicios externos...")
+
+            # Crear user_data temporal solo con CURP para la validación
+            tool_context.state['user_data'] = {'curp': curp_upper}
+
+            curp_result = await self._validate_curp(tool_context)
+
+            if curp_result.get('status') != 'success':
+                return {
+                    "status": "error",
+                    "step": "validate_curp",
+                    "message": f"Fallo en validación CURP: {curp_result.get('message')}"
+                }
+
+            if not curp_result.get('can_proceed', False):
+                return {
+                    "status": "error",
+                    "step": "validate_curp",
+                    "message": "CURP no válido para continuar el proceso",
+                    "details": {
+                        "blacklist_check": curp_result.get('blacklist_check'),
+                        "active_offers_check": curp_result.get('active_offers_check'),
+                        "renapo_check": curp_result.get('active_renapo_check')
+                    }
+                }
+
+            # Paso 3: Extraer datos de RENAPO
+            logger.info("📋 Paso 3: Extrayendo datos personales de RENAPO...")
+            renapo_details = curp_result.get('renapo_details', {})
+            renapo_response = renapo_details.get('responseRenapoDto', {})
+
+            # Construir user_data con información de RENAPO
+            user_data = {
+                'curp': curp_upper,
+                'primerNombre': renapo_response.get('primer_nombre', ''),
+                'segundoNombre': renapo_response.get('segundo_nombre', ''),
+                'apellidoPaterno': renapo_response.get('apellido_paterno', ''),
+                'apellidoMaterno': renapo_response.get('apellido_materno', ''),
+                'fechaNacimiento': renapo_response.get('fecha_nacimiento', ''),
+                'rfc': renapo_response.get('rfc', ''),
+                'validation_method': 'curp_only'  # Marcar que se validó solo con CURP
+            }
+
+            # Guardar en estado
+            tool_context.state['user_data'] = user_data
+            tool_context.state['curp_only_mode'] = True  # Flag para indicar que NO hay INE
+
+            logger.info("Validación con CURP completada exitosamente")
+
+            return {
+                "status": "success",
+                "message": "CURP validado exitosamente",
+                "user_data": user_data,
+                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, precio de la moto, código postal (5 dígitos) y tu dirección (calle y número)."
+            }
+
+        except Exception as e:
+            logger.error(f"Error en validación solo con CURP: {e}")
+            return {
+                "status": "error",
+                "message": f"Error inesperado en validación de CURP: {str(e)}"
             }
 
     async def complete_form_and_nip(self, tool_context: ToolContext, additional_data: dict) -> dict:
@@ -568,7 +677,7 @@ class OriginationTools(BaseAgentTools):
         Envía los datos del formulario completo al API.
 
         Args:
-            additional_data: Datos adicionales del usuario (celular, email.)
+            additional_data: Datos adicionales del usuario (celular, email, y dirección si es modo CURP-only)
 
         Returns:
             Dict con resultado del envío
@@ -578,7 +687,7 @@ class OriginationTools(BaseAgentTools):
             if not user_data:
                 return {
                     "status": "error",
-                    "message": "Datos de usuario no disponibles. Procesa INE primero."
+                    "message": "Datos de usuario no disponibles. Procesa INE o valida CURP primero."
                 }
 
             flow_uuid: str = tool_context.state.get('flow_uuid')
@@ -587,13 +696,27 @@ class OriginationTools(BaseAgentTools):
                     "status": "error",
                     "message": "Flujo no inicializado"
                 }
-            
-            codigoPostal = user_data.get('codigoPostal')
-            if not codigoPostal:
-                return {
-                    "status": "error",
-                    "message": "Código postal no disponible en los datos del INE"
-                }
+
+            # Detectar si estamos en modo CURP-only (sin INE)
+            curp_only_mode = tool_context.state.get('curp_only_mode', False)
+
+            # Obtener código postal
+            if curp_only_mode:
+                # En modo CURP-only, el código postal viene de additional_data
+                codigoPostal = additional_data.get('codigoPostal')
+                if not codigoPostal:
+                    return {
+                        "status": "error",
+                        "message": "Código postal es requerido. Por favor proporciona tu código postal."
+                    }
+            else:
+                # En modo con INE, el código postal viene de user_data
+                codigoPostal = user_data.get('codigoPostal')
+                if not codigoPostal:
+                    return {
+                        "status": "error",
+                        "message": "Código postal no disponible en los datos del INE"
+                    }
 
             # Obteniendo los datos de dirección
             address_data: dict = self._get_address_data(codigoPostal)
@@ -620,40 +743,82 @@ class OriginationTools(BaseAgentTools):
                     "status": "error",
                     "message": f"No se pudieron obtener los datos de dirección: {error_msg}"
                 }
-            
-            # Combinar datos del INE con datos adicionales
-            form_data = {
-                "primerNombre": primer_nombre,
-                "segundoNombre": segundo_nombre,
-                "apellidoPaterno": apellido_paterno,
-                "apellidoMaterno": apellido_materno,
-                "fechaNacimiento": fecha_nacimiento,
-                "curp": curp,
-                "rfc": rfc,
-                "direccion": user_data.get('direccion'),
-                
-                "idColoniaPoblacion": address_data.get("idColonia"),
-                "coloniaPoblacion": user_data.get('coloniaPoblacion'),
 
-                "idAlcaldiaMunicipio": address_data.get("idMunicipio"),
-                "delegacionMunicipio": user_data.get('delegacionMunicipio'),
+            # Combinar datos según el modo (INE o CURP-only)
+            if curp_only_mode:
+                # En modo CURP-only, el usuario proporciona obligatoriamente:
+                # - direccion (calle y número)
+                # - codigoPostal (5 dígitos)
+                # - celular, email, precioMoto
+                # Y el sistema obtiene automáticamente de SEPOMEX:
+                # - IDs: idEstado, idMunicipio, idColonia
+                # - Nombres: estado (descripcionEstado), municipio, colonia
+                form_data = {
+                    "primerNombre": primer_nombre,
+                    "segundoNombre": segundo_nombre,
+                    "apellidoPaterno": apellido_paterno,
+                    "apellidoMaterno": apellido_materno,
+                    "fechaNacimiento": fecha_nacimiento,
+                    "curp": curp,
+                    "rfc": rfc,
+                    "direccion": additional_data.get('direccion', ''),
 
-                "idEstado": address_data.get("idEstado"),
-                "estado": user_data.get('estado'),
+                    "idColoniaPoblacion": address_data.get("idColonia"),
+                    "coloniaPoblacion": address_data.get("colonia", ''),
 
-                "ciudad": user_data.get('ciudad'),
+                    "idAlcaldiaMunicipio": address_data.get("idMunicipio"),
+                    "delegacionMunicipio": address_data.get("municipio", ''),
 
-                "codigoPostal": codigoPostal,
-                
-                "email": additional_data.get('correoElectronico'),
-                "celular": additional_data.get('celular'),
+                    "idEstado": address_data.get("idEstado"),
+                    "estado": address_data.get("estado", ''),
 
-                "modeloMoto": additional_data.get('modeloMoto'),
-                "marcaMoto": additional_data.get('marcaMoto'),
-                "precioMoto": additional_data.get('precioMoto'),
-                
-                "numeroPromotor": "MaxiAgent"
-            }
+                    "ciudad": address_data.get("municipio", ''),  # Usamos municipio como ciudad
+
+                    "codigoPostal": codigoPostal,
+
+                    "email": additional_data.get('correoElectronico'),
+                    "celular": additional_data.get('celular'),
+
+                    "modeloMoto": additional_data.get('modeloMoto', ''),
+                    "marcaMoto": additional_data.get('marcaMoto', ''),
+                    "precioMoto": additional_data.get('precioMoto'),
+
+                    "numeroPromotor": "MaxiAgent"
+                }
+            else:
+                # En modo con INE, los datos de dirección vienen de user_data (INE)
+                form_data = {
+                    "primerNombre": primer_nombre,
+                    "segundoNombre": segundo_nombre,
+                    "apellidoPaterno": apellido_paterno,
+                    "apellidoMaterno": apellido_materno,
+                    "fechaNacimiento": fecha_nacimiento,
+                    "curp": curp,
+                    "rfc": rfc,
+                    "direccion": user_data.get('direccion'),
+
+                    "idColoniaPoblacion": address_data.get("idColonia"),
+                    "coloniaPoblacion": user_data.get('coloniaPoblacion'),
+
+                    "idAlcaldiaMunicipio": address_data.get("idMunicipio"),
+                    "delegacionMunicipio": user_data.get('delegacionMunicipio'),
+
+                    "idEstado": address_data.get("idEstado"),
+                    "estado": user_data.get('estado'),
+
+                    "ciudad": user_data.get('ciudad'),
+
+                    "codigoPostal": codigoPostal,
+
+                    "email": additional_data.get('correoElectronico'),
+                    "celular": additional_data.get('celular'),
+
+                    "modeloMoto": additional_data.get('modeloMoto', ''),
+                    "marcaMoto": additional_data.get('marcaMoto', ''),
+                    "precioMoto": additional_data.get('precioMoto'),
+
+                    "numeroPromotor": "MaxiAgent"
+                }
 
             # Validar datos requeridos
             required_fields: List[str] = ['celular', 'curp', 'email', 'precioMoto']
@@ -1523,12 +1688,15 @@ class OriginationTools(BaseAgentTools):
                     "error": f"Datos incompletos en la respuesta: faltan {', '.join(missing_fields)}"
                 }
 
-            # Retornar datos exitosos
+            # Retornar datos exitosos (IDs y nombres)
             return {
                 "success": True,
-                "idEstado": address_data["idEstado"],
-                "idMunicipio": address_data["idMunicipio"],
-                "idColonia": address_data["idColonia"],
+                "idEstado": address_data.get("idEstado"),
+                "idMunicipio": address_data.get("idMunicipio"),
+                "idColonia": address_data.get("idColonia"),
+                "estado": address_data.get("descripcionEstado", ""),
+                "municipio": address_data.get("municipio", ""),
+                "colonia": address_data.get("colonia", ""),
                 "codigo_postal": codigo_postal
             }
 
