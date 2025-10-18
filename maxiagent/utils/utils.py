@@ -19,22 +19,68 @@ def get_page_content(url) -> str:
     try:
         # Usar session para un mejor manejo de conexiones
         with requests.Session() as session:
-            response: requests.Response = session.get(url, timeout=10)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response: requests.Response = session.get(url, timeout=15, headers=headers)
             response.close()  # Cerrar explícitamente la respuesta
 
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Remover elementos no deseados (scripts, estilos, etc.)
-            for element in soup(['script', 'style', 'nav', 'footer', 'header']):
+            # Remover elementos no deseados
+            for element in soup(['script', 'style', 'nav', 'footer', 'header', 'iframe', 'noscript']):
                 element.decompose()
 
-            # Extraer TODO el texto de la página, incluyendo elementos anidados
-            all_text: str = soup.get_text(' ', strip=True)
+            # Estrategia 1: Buscar secciones específicas de productos/modelos
+            relevant_content = []
 
-            # Reducido de 2000 a 800 para evitar MAX_TOKENS en catalog_agent
-            return all_text[:800]
+            # Selectores comunes para secciones de productos/modelos de motos
+            product_selectors = [
+                # Selectores generales de productos
+                '[class*="product"]', '[class*="modelo"]', '[class*="model"]',
+                '[class*="bike"]', '[class*="moto"]', '[class*="vehicle"]',
+                '[id*="product"]', '[id*="modelo"]', '[id*="model"]',
+                # Selectores de catálogo
+                '[class*="catalog"]', '[class*="catalogo"]', '[class*="grid"]',
+                '[class*="card"]', '[class*="item"]',
+                # Selectores de especificaciones y precios
+                '[class*="spec"]', '[class*="price"]', '[class*="precio"]',
+                # Elementos semánticos
+                'article', 'section[class*="main"]', 'main'
+            ]
+
+            for selector in product_selectors:
+                elements = soup.select(selector)
+                for element in elements:
+                    text = element.get_text(' ', strip=True)
+                    # Filtrar elementos con contenido relevante (que mencionen precios o modelos)
+                    if text and (
+                        '$' in text or
+                        'precio' in text.lower() or
+                        'mxn' in text.lower() or
+                        'cc' in text.lower() or  # cilindrada
+                        'hp' in text.lower() or  # caballos de fuerza
+                        'km/h' in text.lower()
+                    ):
+                        relevant_content.append(text)
+
+            # Si encontramos contenido relevante, usarlo
+            if relevant_content:
+                combined_text = ' | '.join(relevant_content[:10])  # Top 10 secciones relevantes
+                return combined_text[:2000]  # Aumentado a 2000 para tener más contexto
+
+            # Estrategia 2: Buscar el contenido principal (main, article)
+            main_content = soup.find(['main', 'article', 'div[role="main"], section, p'])
+            if main_content:
+                main_text = main_content.get_text(' ', strip=True)
+                return main_text[:2000]
+
+            # Estrategia 3: Fallback - extraer todo el texto pero con más caracteres
+            all_text: str = soup.get_text(' ', strip=True)
+            return all_text[:1500]
+
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error fetching page content from {url}: {e}")
         return ""
     
 def get_secret(secret_name: str) -> str:
