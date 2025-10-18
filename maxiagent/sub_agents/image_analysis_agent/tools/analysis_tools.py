@@ -9,8 +9,10 @@ from google.genai import types
 
 from google.adk.tools.tool_context import ToolContext
 from ..prompts.analysis_prompts import ImageAnalysisPrompts
-from ....core import settings
+from ....core import settings, get_logger
 from ....tools.base_tools import BaseAgentTools
+
+logger = get_logger(__name__)
 
 # Safety settings se configuran usando enums del nuevo Google Gen AI SDK
 
@@ -28,6 +30,7 @@ class ImageAnalysisTools(BaseAgentTools):
                 'validate_image_quality': self.validate_image_quality
             }
         }
+        logger.debug("ImageAnalysisTools inicializado")
 
     async def analyze_ine_document(
         self,
@@ -62,7 +65,7 @@ class ImageAnalysisTools(BaseAgentTools):
                 }
 
             # Logging inicial de contenido recibido
-            print(f"📦 CONTENIDO TOTAL: {len(user_content_parts)} parts recibidos")
+            logger.info(f"📦 Analizando contenido - Total de parts recibidos: {len(user_content_parts)}")
 
             # Filtrar solo imágenes válidas con sus índices originales
             image_parts = []
@@ -79,14 +82,17 @@ class ImageAnalysisTools(BaseAgentTools):
                     continue
                 image_parts.append((idx, part))
 
-            print(f"🖼️  IMÁGENES DETECTADAS: {len(image_parts)} en índices {[idx for idx, _ in image_parts]}")
+            image_indices = [idx for idx, _ in image_parts]
+            logger.info(f"🖼️ Imágenes detectadas: {len(image_parts)} en índices {image_indices}")
 
             if len(image_parts) == 0:
-                print(f"⚠️  NO SE ENCONTRARON IMÁGENES EN EL CONTENIDO")
-                return {
+                logger.error("⚠️ NO se encontraron imágenes en el contenido del usuario")
+                result = {
                     "status": "error",
                     "message": "No se encontraron imágenes en el mensaje"
                 }
+                logger.debug(f"Retornando error: {result}")
+                return result
 
             analyzed_images = []
             analysis_errors = []  # Tracking de errores
@@ -98,10 +104,8 @@ class ImageAnalysisTools(BaseAgentTools):
                 mime_type: str = inline_data.mime_type
 
                 image_hash: str = hashlib.md5(image_data).hexdigest()
-                print(f"🔍 Procesando imagen en índice original: {original_idx}")
-                print(f"   - Tamaño: {len(image_data)} bytes")
-                print(f"   - Tipo MIME: {mime_type}")
-                print(f"   - Hash: {image_hash[:8]}")
+                logger.info(f"🔍 Procesando imagen {original_idx + 1}/{len(image_parts)} - Hash: {image_hash[:8]}")
+                logger.debug(f"Detalles imagen {original_idx}: Tamaño={len(image_data)} bytes, MIME={mime_type}")
 
                 # Realizar análisis usando el modelo configurado
                 analysis_result: dict[str, str] = await self._analyze_image_with_model(
@@ -119,7 +123,7 @@ class ImageAnalysisTools(BaseAgentTools):
                         "mime_type": mime_type
                     }
                     analysis_errors.append(error_info)
-                    print(f"❌ Error analizando imagen {original_idx}: {analysis_result.get('message')}")
+                    logger.error(f"❌ Error analizando imagen {original_idx}: {analysis_result.get('message')}")
                     continue
                 
                 detected_type = analysis_result["type"]
@@ -150,13 +154,13 @@ class ImageAnalysisTools(BaseAgentTools):
                         "confidence": confidence
                     }
                     analysis_errors.append(error_info)
-                    print(f"⚠️  Imagen clasificada como indeterminada")
+                    logger.warning(f"⚠️ Imagen {original_idx} clasificada como indeterminada")
 
                 # Verificar duplicados
                 if state_key in tool_context.state:
                     existing_hash = hashlib.md5(base64.b64decode(tool_context.state[state_key])).hexdigest()
                     if existing_hash == image_hash:
-                        print(f"⚠️  Imagen {image_type} duplicada, saltando...")
+                        logger.warning(f"⚠️ Imagen {image_type} duplicada (hash: {image_hash[:8]}), saltando...")
                         continue
 
                 # Guardar imagen en base64
@@ -184,14 +188,13 @@ class ImageAnalysisTools(BaseAgentTools):
                     "original_index": original_idx
                 })
 
-                print(f"✅ Imagen clasificada como: {image_type} (confianza: {confidence})")
-                print(f"   - State key guardado: {state_key}")
-                print(f"   - Artifact guardado: {filename}")
+                logger.info(f"✅ Imagen clasificada como: {image_type} (confianza: {confidence})")
+                logger.debug(f"State key guardado: {state_key}, Artifact: {filename}")
 
             # Guardar metadata de errores en el state para que otros agentes la usen
             if analysis_errors:
                 tool_context.state['ine_analysis_errors'] = analysis_errors
-                print(f"⚠️  Se registraron {len(analysis_errors)} error(es) durante el análisis")
+                logger.warning(f"⚠️ Se registraron {len(analysis_errors)} error(es) durante el análisis")
 
             # Determinar qué imágenes fueron procesadas exitosamente
             has_front = 'ine_front_image' in tool_context.state
@@ -208,27 +211,29 @@ class ImageAnalysisTools(BaseAgentTools):
             }
 
             # Logging final del análisis
-            print(f"📊 RESUMEN DE ANÁLISIS:")
-            print(f"   - Total imágenes analizadas: {len(analyzed_images)}")
-            print(f"   - Total errores: {len(analysis_errors)}")
-            print(f"   - ine_front_image en state: {has_front}")
-            print(f"   - ine_back_image en state: {has_back}")
+            logger.info(f"📊 RESUMEN DE ANÁLISIS COMPLETADO")
+            logger.info(f"Imágenes analizadas: {len(analyzed_images)}, Errores: {len(analysis_errors)}")
+            logger.debug(f"Estado final - Frontal: {has_front}, Reverso: {has_back}")
 
-            return {
+            result = {
                 "status": "success",
                 "message": f"Se analizaron {len(analyzed_images)} imagen(es) exitosamente",
                 "analyzed_images": analyzed_images,
                 "total_processed": len(analyzed_images),
                 "errors": analysis_errors if analysis_errors else None
             }
+            logger.debug(f"Retornando resultado exitoso con {len(analyzed_images)} imagen(es)")
+            return result
 
         except Exception as e:
             error_msg = f"Error analizando documento INE: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def save_classified_image(
         self,
@@ -283,25 +288,24 @@ class ImageAnalysisTools(BaseAgentTools):
                 }
 
             # Logging inicial
-            print(f"🔍 VALIDACIÓN DE CALIDAD:")
-            print(f"   - Total parts a validar: {len(user_content_parts)}")
+            logger.info(f"🔍 Validación de calidad - Total parts: {len(user_content_parts)}")
 
             validation_results = []
             for idx, image_part in enumerate(user_content_parts):
                 inline_data: types.Blob | None = image_part.inline_data
                 if not inline_data:
-                    print(f"❌ Part {idx + 1}: No tiene inline_data")
+                    logger.warning(f"❌ Part {idx + 1}: No tiene inline_data")
                     continue
 
                 # Valiendo si el archivo es una imagen
                 mime_type: str | None = inline_data.mime_type
                 if not mime_type or not mime_type.startswith('image/'):
-                    print(f"❌ Part {idx + 1}: No es una imagen (mime_type: {mime_type})")
+                    logger.warning(f"❌ Part {idx + 1}: No es una imagen (mime_type: {mime_type})")
                     continue
 
                 image_data: bytes | None = inline_data.data
                 if not image_data:
-                    print(f"❌ Part {idx + 1}: No tiene datos de imagen")
+                    logger.warning(f"❌ Part {idx + 1}: No tiene datos de imagen")
                     continue
                 image_size = len(image_data)
 
@@ -322,7 +326,7 @@ class ImageAnalysisTools(BaseAgentTools):
                     "is_valid": is_valid
                 })
 
-                print(f"✅ Imagen {idx + 1}: {quality} quality, {'válida' if is_valid else 'inválida'}, {image_size} bytes")
+                logger.debug(f"✅ Imagen {idx + 1}: {quality} quality, {'válida' if is_valid else 'inválida'}, {image_size} bytes")
 
             return {
                 "status": "success",
@@ -353,17 +357,17 @@ class ImageAnalysisTools(BaseAgentTools):
                 project=settings.PROJECT_ID,
                 location=settings.LOCATION
             )
-            print(f"🔧 Cliente Gen AI inicializado para proyecto {settings.PROJECT_ID}")
+            logger.debug(f"🔧 Cliente Gen AI inicializado para proyecto {settings.PROJECT_ID}")
             return client
         except Exception as e:
-            print(f"❌ Error inicializando cliente Gen AI: {e}")
+            logger.warning(f"❌ Error inicializando cliente Gen AI: {e}")
             # Fallback: intentar con variables de entorno
             try:
                 client = genai.Client(vertexai=True)
-                print("🔧 Cliente Gen AI inicializado con variables de entorno")
+                logger.info("🔧 Cliente Gen AI inicializado con variables de entorno")
                 return client
             except Exception as fallback_error:
-                print(f"❌ Error en fallback: {fallback_error}")
+                logger.error(f"❌ Error en fallback inicializando Gen AI client: {fallback_error}")
                 raise e
 
     async def _analyze_image_with_model(self, image_data: bytes, mime_type: str = 'image/jpeg') -> dict:
@@ -387,12 +391,12 @@ class ImageAnalysisTools(BaseAgentTools):
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_closed():
-                        print(f"⚠️  Event loop cerrado detectado, creando nuevo loop (intento {attempt + 1})")
+                        logger.warning(f"⚠️ Event loop cerrado detectado, creando nuevo loop (intento {attempt + 1})")
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                 except RuntimeError:
                     # No hay event loop en el thread actual
-                    print(f"⚠️  No hay event loop, creando uno nuevo (intento {attempt + 1})")
+                    logger.warning(f"⚠️ No hay event loop, creando uno nuevo (intento {attempt + 1})")
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
 
@@ -438,7 +442,7 @@ class ImageAnalysisTools(BaseAgentTools):
                     ),
                 ]
 
-                print(f"🤖 Enviando imagen al modelo {model} para análisis (intento {attempt + 1})...")
+                logger.debug(f"🤖 Enviando imagen al modelo {model} para análisis (intento {attempt + 1})")
 
                 # Usar la interfaz asíncrona del SDK
                 response: types.GenerateContentResponse = await client.aio.models.generate_content(
@@ -482,7 +486,7 @@ class ImageAnalysisTools(BaseAgentTools):
 
                 # Concatenar todos los text parts
                 analysis_result = " ".join(text_parts).strip().upper()
-                print(f"📝 Respuesta del modelo: {analysis_result}")
+                logger.debug(f"📝 Respuesta del modelo: {analysis_result}")
 
                 # Mapear respuesta a formato esperado
                 if "FRENTE" in analysis_result:
@@ -519,13 +523,13 @@ class ImageAnalysisTools(BaseAgentTools):
                 # Manejo específico para errores de event loop
                 error_msg = str(e)
                 if "Event loop is closed" in error_msg or "no running event loop" in error_msg:
-                    print(f"⚠️  Error de event loop detectado: {error_msg}")
+                    logger.warning(f"⚠️ Error de event loop detectado: {error_msg}")
                     if attempt < max_retries:
-                        print(f"🔄 Reintentando en {retry_delay}s... (intento {attempt + 2}/{max_retries + 1})")
+                        logger.info(f"🔄 Reintentando en {retry_delay}s... (intento {attempt + 2}/{max_retries + 1})")
                         await asyncio.sleep(retry_delay)
                         continue
                     else:
-                        print(f"❌ Máximo de reintentos alcanzado para error de event loop")
+                        logger.error(f"❌ Máximo de reintentos alcanzado para error de event loop")
                         return {
                             "status": "error",
                             "type": "unknown",
@@ -533,7 +537,7 @@ class ImageAnalysisTools(BaseAgentTools):
                         }
                 else:
                     # Otro tipo de RuntimeError
-                    print(f"❌ RuntimeError en análisis: {e}")
+                    logger.error(f"❌ RuntimeError en análisis: {e}", exc_info=True)
                     return {
                         "status": "error",
                         "type": "unknown",
@@ -542,11 +546,11 @@ class ImageAnalysisTools(BaseAgentTools):
 
             except Exception as e:
                 error_msg = str(e)
-                print(f"❌ Error en análisis con modelo Gen AI: {error_msg}")
+                logger.error(f"❌ Error en análisis con modelo Gen AI: {error_msg}", exc_info=True)
 
                 # Reintentar para ciertos errores de red/timeout
                 if attempt < max_retries and any(keyword in error_msg.lower() for keyword in ["timeout", "connection", "network"]):
-                    print(f"🔄 Reintentando debido a error de red... (intento {attempt + 2}/{max_retries + 1})")
+                    logger.info(f"🔄 Reintentando debido a error de red... (intento {attempt + 2}/{max_retries + 1})")
                     await asyncio.sleep(retry_delay)
                     continue
 

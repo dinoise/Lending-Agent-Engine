@@ -371,8 +371,10 @@ class OriginationTools(BaseAgentTools):
         Returns:
             Dict con el UUID del flujo o error
         """
+        logger.info("Iniciando nuevo flujo de cotización")
         try:
             api_url = f"{settings.URL_ORIGINADOR}/originacion/nuevo-flujo"
+            logger.debug(f"Llamando a API: {api_url}")
 
             response = await self._call_originador_api(api_url, method='GET')
 
@@ -380,30 +382,38 @@ class OriginationTools(BaseAgentTools):
             flow_uuid = data.get('uuidFlujo')
 
             if not flow_uuid:
+                logger.error("El servidor no retornó un flow_uuid válido")
                 raise ValueError("No se recibió flow_uuid del servidor")
 
             # Guardar en estado de sesión
             tool_context.state['flow_uuid'] = flow_uuid
+            logger.info(f"Flujo inicializado exitosamente con UUID: {flow_uuid}")
 
-            return {
+            result = {
                 "status": "success",
                 "message": f"Flujo inicializado exitosamente."
             }
+            logger.debug(f"Retornando resultado: {result}")
+            return result
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "inicializar flujo")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request inicializando flujo: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado inicializando flujo: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def _process_ine_documents(self, tool_context: ToolContext) -> dict:
         """
@@ -429,13 +439,12 @@ class OriginationTools(BaseAgentTools):
             processing_metadata = tool_context.state.get('ine_processing_metadata', {})
 
             # Logging crítico del estado
-            print(f"📤 PREPARANDO ENVÍO DE INE AL API:")
-            print(f"   - flow_uuid: {flow_uuid}")
-            print(f"   - ine_front_image presente: {'✅' if ine_front else '❌ FALTANTE'}")
-            print(f"   - ine_front_image tamaño: {len(ine_front) if ine_front else 0} chars")
-            print(f"   - ine_back_image presente: {'✅' if ine_back else '❌ FALTANTE'}")
-            print(f"   - ine_back_image tamaño: {len(ine_back) if ine_back else 0} chars")
-            print(f"   - Errores de análisis: {len(analysis_errors)}")
+            logger.info("📤 Preparando envío de INE al API")
+            logger.debug(f"Estado de imágenes - flow_uuid: {flow_uuid}")
+            logger.debug(f"INE frontal: {'presente' if ine_front else 'FALTANTE'} ({len(ine_front) if ine_front else 0} chars)")
+            logger.debug(f"INE reverso: {'presente' if ine_back else 'FALTANTE'} ({len(ine_back) if ine_back else 0} chars)")
+            if analysis_errors:
+                logger.warning(f"Se detectaron {len(analysis_errors)} errores de análisis previos")
 
             if ine_front and ine_back:
                 api_url: str = f"{settings.URL_ORIGINADOR}/originacion/subir-ine"
@@ -446,7 +455,7 @@ class OriginationTools(BaseAgentTools):
                     "reversoBase64": ine_back
                 }
 
-                print(f"🚀 Enviando payload al API...")
+                logger.info(f"🚀 Enviando imágenes INE al API - URL: {api_url}")
                 response = await self._call_originador_api(
                     api_url,
                     method='POST',
@@ -455,12 +464,14 @@ class OriginationTools(BaseAgentTools):
                     timeout=60
                 )
 
-                print(f"✅ API respondió exitosamente: {response.status_code}")
+                logger.info(f"✅ API respondió exitosamente - Status: {response.status_code}")
 
-                return {
+                result = {
                     "status": "success",
                     "message": "Documentos INE enviados para procesamiento"
                 }
+                logger.debug(f"Retornando resultado exitoso: {result}")
+                return result
 
             missing_images = []
             error_details = []
@@ -480,12 +491,14 @@ class OriginationTools(BaseAgentTools):
                     error_details.append(f"Imagen reverso: {back_errors[-1].get('error_message', 'Error desconocido')}")
 
             missing_text = " y ".join(missing_images)
-            print(f"❌ ERROR: Faltan imágenes del INE: {missing_text}")
+            logger.error(f"❌ Faltan imágenes del INE: {missing_text}")
+            logger.debug(f"Estado - Frontal: {bool(ine_front)}, Reverso: {bool(ine_back)}")
 
             # Construir mensaje con detalles de errores
             error_message = f"Se requieren ambas imágenes del INE. Faltante(s): {missing_text}."
 
             if error_details:
+                logger.warning(f"Detalles de errores: {error_details}")
                 error_message += "\n\nPosibles causas:\n" + "\n".join([f"• {detail}" for detail in error_details])
             else:
                 error_message += " Por favor, proporciona la(s) imagen(es) faltante(s)."
@@ -494,9 +507,10 @@ class OriginationTools(BaseAgentTools):
             if processing_metadata:
                 total_received = processing_metadata.get('total_images_received', 0)
                 if total_received > 0:
+                    logger.warning(f"Se recibieron {total_received} imagen(es) pero no se clasificaron correctamente")
                     error_message += f"\n\nSe recibieron {total_received} imagen(es) pero no se pudieron clasificar correctamente."
 
-            return {
+            result = {
                 "status": "error",
                 "message": error_message,
                 "missing_images": missing_images,
@@ -505,21 +519,27 @@ class OriginationTools(BaseAgentTools):
                 "analysis_errors": analysis_errors,
                 "processing_metadata": processing_metadata
             }
-            
+            logger.debug(f"Retornando error de imágenes faltantes: {result['message']}")
+            return result
+
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "procesar documentos INE")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request procesando INE: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error de request: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado procesando documentos INE: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error inesperado: {result}")
+            return result
 
     async def _verify_ine_processing(self, tool_context: ToolContext, max_retries: int = 10) -> dict:
         """
@@ -585,11 +605,13 @@ class OriginationTools(BaseAgentTools):
 
         except Exception as e:
             error_msg = f"Error verificando procesamiento INE: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def _validate_curp(self, tool_context: ToolContext) -> dict:
         """
@@ -858,18 +880,22 @@ class OriginationTools(BaseAgentTools):
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "enviar formulario")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request enviando formulario: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado enviando formulario: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def _send_nip(self, tool_context: ToolContext) -> dict:
         """
@@ -906,35 +932,43 @@ class OriginationTools(BaseAgentTools):
 
             response_json = response.json()
 
-            print( "pedir nip res ", response_json )
+            logger.debug(f"Respuesta de pedir NIP: {response_json}")
 
             req_nip: bool = response_json.get("pedirNip")
 
             if req_nip:
                 # Guardar estado del NIP
                 tool_context.state['nip_requested'] = True
+                logger.info("NIP solicitado - El usuario debe recibirlo en su celular")
             else:
                 tool_context.state['nip_requested'] = False
+                logger.info("NIP NO requerido - Saltando paso de confirmación")
 
-            return {
+            result = {
                 "status": "success",
                 "message": "NIP enviado exitosamente. El usuario debe revisar su teléfono celular." if req_nip else "No es necesario que pidas el NIP, al siguiente paso"
             }
+            logger.debug(f"Retornando resultado: {result}")
+            return result
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "enviar NIP")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request enviando NIP: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado enviando NIP: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def _confirm_nip(self, tool_context: ToolContext, nip: str) -> dict:
         """
@@ -992,18 +1026,22 @@ class OriginationTools(BaseAgentTools):
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "confirmar NIP")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request confirmando NIP: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado confirmando NIP: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def resend_nip(self, tool_context: ToolContext) -> dict:
         """
@@ -1045,18 +1083,22 @@ class OriginationTools(BaseAgentTools):
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "reenviar NIP")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request reenviando NIP: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado reenviando NIP: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def _query_offers(self, tool_context: ToolContext) -> dict:
         """
@@ -1116,18 +1158,22 @@ class OriginationTools(BaseAgentTools):
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "consultar ofertas")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request consultando ofertas: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado consultando ofertas: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     async def select_offer(self, tool_context: ToolContext, plazo_selected: str) -> dict:
         """
@@ -1295,18 +1341,22 @@ class OriginationTools(BaseAgentTools):
 
         except requests.RequestException as e:
             error_msg = self._handle_request_exception(e, "seleccionar oferta")
-            print(error_msg)
-            return {
+            logger.error(f"Error de request seleccionando oferta: {error_msg}")
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
         except Exception as e:
             error_msg = f"Error inesperado seleccionando oferta: {e}"
-            print(error_msg)
-            return {
+            logger.error(error_msg, exc_info=True)
+            result = {
                 "status": "error",
                 "message": error_msg
             }
+            logger.debug(f"Retornando error: {result}")
+            return result
 
     # === Validation Methods ===
 
@@ -1510,7 +1560,7 @@ class OriginationTools(BaseAgentTools):
             api_message = self._extract_api_error_message(exception.response)
             message_suffix = f" Mensaje de la API: {api_message}" if api_message else ""
 
-            print(f"status_code {status_code}. API message: {api_message}")
+            logger.warning(f"Error HTTP al {operation} - Status: {status_code}, Mensaje API: {api_message}")
 
             if status_code == 400:
                 return f"Solicitud inválida al {operation}. Revisa los datos enviados.{message_suffix}"
