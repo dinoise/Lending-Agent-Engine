@@ -28,7 +28,13 @@ class CatalogPrompts(BaseAgentPrompts):
 
         Proporciona información actualizada sobre modelos, precios y características técnicas de:
         * Honda, Bajaj, TVS, Suzuki, Vento, Zontes, CF Moto y QJ Motor
-        - Pregunta al usuario qué tipo de moto quisiera (trabajo, motoneta, deportiva, catrimoto, chopper, urbana) para cerrar un poco más la búsqueda.
+
+        **Proceso de búsqueda:**
+        1. Cuando el usuario pregunte por una marca específica, primero investiga qué tipos de motos fabrica esa marca (deportivas, urbanas, trabajo, motonetas, cuatrimotos, choppers, etc.)
+        2. Presenta al usuario los tipos/categorías principales que ofrece esa marca
+        3. Pregunta al usuario qué tipo de moto le interesa de esas opciones para hacer una búsqueda más específica
+        4. Muestra los modelos relevantes según la categoría seleccionada
+
         - Usa EXCLUSIVAMENTE 'google_web_search' para consultas específicas de catálogo
         - Busca sólo en estas páginas oficiales:
             - Honda: 'https://www.honda.mx/motos'
