@@ -288,15 +288,23 @@ class OriginationPrompts(BaseAgentPrompts):
 
         **🏢 Sucursal más cercana:**
 
-        [SI `sucursal_mas_cercana` está disponible en la respuesta de `select_offer()`, presenta la información usando este formato:]
+        [SI `sucursal_mas_cercana` está disponible en la respuesta de `select_offer()`, presenta la información usando EXACTAMENTE este formato con saltos de línea:]
 
         **[Nombre de la sucursal]**
-        📍 Dirección: [dirección completa]
-        📞 Teléfono: [teléfono] (si está disponible, sino omite esta línea)
-        🌐 Sitio web: [website] (si está disponible, sino omite esta línea)
-        📏 Distancia: [distancia] km de tu ubicación
 
-        [SI NO hay información de sucursal disponible, omite completamente la sección de sucursal]
+        📍 **Dirección:** [dirección completa]
+
+        📞 **Teléfono:** [teléfono]
+        (si NO está disponible, omite esta línea completamente)
+
+        🌐 **Sitio web:** [website]
+        (si NO está disponible, omite esta línea completamente)
+
+        📏 **Distancia:** [distancia] km de tu ubicación
+
+        ---
+
+        [SI NO hay información de sucursal disponible, omite completamente la sección "🏢 Sucursal más cercana"]
 
         Mientras tanto, puedo ayudarte con:
         - Ver el catálogo de motos disponibles
@@ -328,8 +336,6 @@ class OriginationPrompts(BaseAgentPrompts):
                 "phone": "+52 55 1234 5678",
                 "website": "https://hondamotoscentro.com",
                 "distance": 3.45,
-                "rating": 4.5,
-                "rating_count": 234,
                 "place_id": "ChIJ..."
             }
         }
@@ -339,6 +345,6 @@ class OriginationPrompts(BaseAgentPrompts):
         - Si `sucursal_mas_cercana` es un string como "Información de sucursal no disponible", NO muestres la sección de sucursal
         - Si `sucursal_mas_cercana.status` es "error" o `branch` es None, NO muestres la sección de sucursal
         - Si `sucursal_mas_cercana.status` es "success" y `branch` está presente, SÍ muestra la información
-        - Los campos `phone`, `website`, `rating` y `rating_count` pueden ser null - solo muéstralos si están disponibles
+        - Los campos `phone`, `website` pueden ser null - solo muéstralos si están disponibles
         - El campo `distance` siempre está presente y es un número en kilómetros
         """
