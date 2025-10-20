@@ -1874,9 +1874,11 @@ class OriginationTools(BaseAgentTools):
 
             # Construir queries de búsqueda optimizadas
             search_queries = [
-                f"{marca_moto} motocicletas distribuidor México",
-                f"{marca_moto} motos agencia México",
-                f"{marca_moto} dealership Mexico"
+                f"{marca_moto}",
+                f"{marca_moto} motocycles",
+                f"{marca_moto} motocicletas",
+                f"{marca_moto} motos agencia",
+                f"{marca_moto} distribuidores"
             ]
 
             all_places = []
@@ -1904,7 +1906,7 @@ class OriginationTools(BaseAgentTools):
                                     "latitude": lat,
                                     "longitude": lng
                                 },
-                                "radius": 50000.0  # 50 km en metros
+                                "radius": 30000.0  # 30 km en metros
                             }
                         },
                         "languageCode": "es",
