@@ -26,6 +26,34 @@ except ImportError:
     CLOUD_LOGGING_AVAILABLE = False
 
 
+class SupressGenAIWarningsFilter(logging.Filter):
+    """
+    Filter to suppress specific noisy warnings from Google Gen AI SDK.
+
+    Blocks messages containing:
+    - "there are non-text parts in the response"
+    - "thought_signature"
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Block specific Gen AI SDK warnings
+        message = record.getMessage()
+
+        # List of patterns to suppress
+        suppress_patterns = [
+            "there are non-text parts in the response",
+            "thought_signature",
+            "returning concatenated text result from text parts",
+        ]
+
+        # If message contains any suppress pattern, block it
+        for pattern in suppress_patterns:
+            if pattern in message:
+                return False  # Don't log this message
+
+        return True  # Log this message
+
+
 class ColoredFormatter(logging.Formatter):
     """
     Colored log formatter for better readability in local development.
@@ -163,15 +191,30 @@ def _suppress_noisy_loggers() -> None:
         'urllib3',
         'google.auth',
         'google.api_core',
-        'google.genai.types',  # Suppress Google Gen AI SDK warnings
         'werkzeug',  # Flask's built-in server
-        'google_genai.types',  # Supressing the 'there are non-text parts' message
         'google_adk.google.adk.models.google_llm',  # Suppress verbose LLM request/response logs
         'google.adk.models.google_llm',  # Alternative path for ADK LLM logs
     ]
 
+    # Suppress noisy Google Gen AI SDK loggers with both naming conventions
+    genai_loggers = [
+        'google.genai.types',
+        'google_genai.types',
+        'google.genai',
+        'google_genai',
+    ]
+
+    # Set WARNING level for regular noisy loggers
     for logger_name in noisy_loggers:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+    # Set ERROR level for extremely verbose Gen AI loggers (suppress WARNING too)
+    # AND add custom filter to block specific noisy messages
+    genai_filter = SupressGenAIWarningsFilter()
+    for logger_name in genai_loggers:
+        genai_logger = logging.getLogger(logger_name)
+        genai_logger.setLevel(logging.ERROR)
+        genai_logger.addFilter(genai_filter)  # Add custom filter to block specific messages
 
 
 def get_logger(name: str) -> logging.Logger:
