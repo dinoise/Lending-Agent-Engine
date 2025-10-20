@@ -228,9 +228,10 @@ The Origination Agent automatically collects:
    RAG_CORPUS=projects/YOUR_PROJECT/locations/us-central1/ragCorpora/YOUR_CORPUS_ID
    EMBEDDING_MODEL_NAME=text-embedding-004
 
-   # Google Search API
+   # Google APIs
    GOOGLE_SEARCH_API_KEY=your-google-search-api-key
    GOOGLE_CSE_ID=your-custom-search-engine-id
+   GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 
    # Environment
    FLASK_ENV=dev
@@ -332,7 +333,7 @@ Ensure your `.env` file contains the required variables for your target environm
 
 **Development Environment:**
 - `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `STAGING_BUCKET`
-- `RAG_CORPUS`, `GOOGLE_CSE_ID`, `GOOGLE_SEARCH_API_KEY`
+- `RAG_CORPUS`, `GOOGLE_CSE_ID`, `GOOGLE_SEARCH_API_KEY`, `GOOGLE_MAPS_API_KEY`
 - `ROOT_AGENT_MODEL`, `ENV` (set to "dev")
 - `URL_CALCULADORA_DEV`, `KEY_CALCULADORA_DEV`, `API_MAXIKASH_DEV`
 - `URL_ORIGINADOR_DEV`, `KEY_ORIGINADOR_DEV`

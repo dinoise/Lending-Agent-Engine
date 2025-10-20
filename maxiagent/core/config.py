@@ -101,6 +101,11 @@ class Settings(BaseSettings):
         description="Google Custom Search Engine ID"
     )
 
+    GOOGLE_MAPS_API_KEY: str | None = Field(
+        default=None,
+        description="Google Maps Platform API key (Places API + Geocoding API)"
+    )
+
     # ==================== Embedding Configuration ====================
     EMBEDDING_MODEL_NAME: str | None = Field(
         default=None,

@@ -120,7 +120,7 @@ class OriginationTools(BaseAgentTools):
                 "status": "success",
                 "message": "Datos del INE procesados y CURP validado exitosamente",
                 "user_data": tool_context.state.get('user_data', {}),
-                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico y precio de la moto."
+                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, marca de la moto y precio de la moto."
             }
 
         except Exception as e:
@@ -227,7 +227,7 @@ class OriginationTools(BaseAgentTools):
                 "status": "success",
                 "message": "CURP validado exitosamente",
                 "user_data": user_data,
-                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, precio de la moto, código postal (5 dígitos) y tu dirección (calle y número)."
+                "next_step": "Ahora necesito que me proporciones: celular, correo electrónico, marca de la moto, precio de la moto, código postal (5 dígitos) y tu dirección (calle y número)."
             }
 
         except Exception as e:
@@ -246,7 +246,7 @@ class OriginationTools(BaseAgentTools):
         2. send_nip() - Solicita envío de NIP automáticamente
 
         Args:
-            additional_data: Dict con {celular, correoElectronico, precioMoto}
+            additional_data: Dict con {celular, correoElectronico, marcaMoto, precioMoto, ...}
 
         Returns:
             Dict con resultado y mensaje para solicitar NIP al usuario
@@ -843,7 +843,7 @@ class OriginationTools(BaseAgentTools):
                 }
 
             # Validar datos requeridos
-            required_fields: List[str] = ['celular', 'curp', 'email', 'precioMoto']
+            required_fields: List[str] = ['celular', 'curp', 'email', 'marcaMoto', 'precioMoto']
             missing_fields: List[str] = [field for field in required_fields if not form_data.get(field)]
 
             # Validar datos de dirección requeridos
@@ -1223,9 +1223,11 @@ class OriginationTools(BaseAgentTools):
             # Verificar que el plazo seleccionado existe en las ofertas disponibles
             available_plazos = [str(offer.get('plazo', '')) for offer in offers if offer.get('plazo')]
             if plazo_selected not in available_plazos:
+                msg = f"Plazo '{plazo_selected}' no está disponible en las ofertas consultadas. Plazos disponibles: {', '.join(available_plazos)}"
+                logger.error(msg)
                 return {
                     "status": "error",
-                    "message": f"Plazo '{plazo_selected}' no está disponible en las ofertas consultadas. Plazos disponibles: {', '.join(available_plazos)}"
+                    "message": msg 
                 }
 
             # Verificar que el NIP haya sido confirmado
@@ -1333,10 +1335,24 @@ class OriginationTools(BaseAgentTools):
                 # No fallar si n8n falla, solo loggear
                 logger.error(f"Error triggering n8n workflow: {n8n_error}")
 
+            # Realizar obtención de sucursal más cercana con el Código Postal
+            codigo_postal = form_data.get('codigoPostal', '')
+            marca_moto = form_data.get('marcaMoto', '')
+            if codigo_postal:
+                # Obtención de código postal mediante la API de Google Maps
+                logger.info(f"Obteniendo sucursal más cercana para código postal: {codigo_postal}")
+                nearest_branch = self._get_nearest_branch(codigo_postal, marca_moto)
+                tool_context.state['nearest_branch'] = nearest_branch
+                logger.info(f"Sucursal más cercana obtenida: {nearest_branch}")
+            else:
+                logger.warning("Código postal no disponible en form_data, no se puede obtener sucursal más cercana")
+                nearest_branch = {}
+
             return {
                 "status": "success",
                 "message": f"Oferta de {plazo_selected} semanas seleccionada exitosamente",
-                "plazo": plazo_selected
+                "plazo": plazo_selected,
+                "sucursal_mas_cercana": nearest_branch if nearest_branch else "Información de sucursal no disponible"
             }
 
         except requests.RequestException as e:
@@ -1766,3 +1782,247 @@ class OriginationTools(BaseAgentTools):
                 "success": False,
                 "error": f"Error inesperado obteniendo datos de dirección: {str(e)}"
             }
+    
+    def _get_nearest_branch(self, codigo_postal: str, marca_moto: str) -> dict:
+        """
+        Obtiene la sucursal más cercana de una marca de motocicletas basada en el código postal.
+
+        Utiliza Google Maps Platform APIs (New) con enfoque de 2 pasos:
+        1. Geocoding API: Convierte código postal a coordenadas (lat/lon)
+        2. Places API (New) - Text Search: Busca distribuidores/sucursales cercanas de la marca
+
+        Args:
+            codigo_postal (str): Código postal mexicano (5 dígitos)
+            marca_moto (str): Marca de la motocicleta (ej: "Honda", "Bajaj", "Suzuki")
+
+        Returns:
+            dict: Datos de la sucursal más cercana con estructura:
+                {
+                    "status": "success" | "error",
+                    "branch": {
+                        "name": str,
+                        "address": str,
+                        "phone": str | None,
+                        "website": str | None,
+                        "distance": float,  # en kilómetros
+                        "place_id": str
+                    } | None,
+                    "message": str (solo en caso de error)
+                }
+        """
+        logger.info(f"🏢 Iniciando búsqueda de sucursal - Marca: '{marca_moto}', CP: '{codigo_postal}'")
+
+        # Validar API key
+        if not settings.GOOGLE_MAPS_API_KEY:
+            logger.error("❌ GOOGLE_MAPS_API_KEY no configurada en settings")
+            result = {
+                "status": "error",
+                "branch": None,
+                "message": "API key de Google Maps no configurada"
+            }
+            logger.debug(f"Retornando error: {result}")
+            return result
+
+        # Validar parámetros
+        if not codigo_postal or not marca_moto:
+            logger.warning(f"⚠️ Parámetros incompletos - CP: '{codigo_postal}', Marca: '{marca_moto}'")
+            result = {
+                "status": "error",
+                "branch": None,
+                "message": "Código postal y marca son requeridos"
+            }
+            logger.debug(f"Retornando error: {result}")
+            return result
+
+        try:
+            # PASO 1: Geocoding - Convertir código postal a coordenadas
+            logger.info(f"📍 Paso 1/2: Geocodificando CP '{codigo_postal}' (México)")
+
+            geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
+            geocode_params = {
+                "address": codigo_postal,
+                "components": "country:MX",
+                "key": settings.GOOGLE_MAPS_API_KEY
+            }
+
+            logger.debug(f"Llamando Geocoding API: {geocode_url}")
+            geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
+            geocode_response.raise_for_status()
+            geocode_data = geocode_response.json()
+
+            logger.debug(f"Geocoding API status: {geocode_data.get('status')}")
+
+            if geocode_data.get('status') != 'OK' or not geocode_data.get('results'):
+                logger.warning(f"⚠️ No se encontraron coordenadas para CP: {codigo_postal}")
+                result = {
+                    "status": "error",
+                    "branch": None,
+                    "message": f"No se pudo geocodificar el código postal: {codigo_postal}"
+                }
+                logger.debug(f"Retornando error: {result}")
+                return result
+
+            # Extraer coordenadas
+            location = geocode_data['results'][0]['geometry']['location']
+            lat = location['lat']
+            lng = location['lng']
+            logger.info(f"✅ Coordenadas obtenidas - Lat: {lat}, Lng: {lng}")
+            logger.debug(f"Dirección formateada: {geocode_data['results'][0].get('formatted_address', 'N/A')}")
+
+            # PASO 2: Places API (New) - Text Search
+            logger.info(f"🔍 Paso 2/2: Buscando sucursales de '{marca_moto}' usando Places API (New)")
+
+            # Construir queries de búsqueda optimizadas
+            search_queries = [
+                f"{marca_moto} motocicletas distribuidor México",
+                f"{marca_moto} motos agencia México",
+                f"{marca_moto} dealership Mexico"
+            ]
+
+            all_places = []
+
+            # Usar Places API (New) - Text Search
+            # Documentación: https://developers.google.com/maps/documentation/places/web-service/text-search
+            places_url = "https://places.googleapis.com/v1/places:searchText"
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": settings.GOOGLE_MAPS_API_KEY,
+                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places,places.nationalPhoneNumber,places.websiteUri"
+            }
+
+            for idx, query in enumerate(search_queries):
+                logger.debug(f"Búsqueda {idx + 1}/{len(search_queries)} - Query: '{query}'")
+
+                try:
+                    # Body para Text Search
+                    request_body = {
+                        "textQuery": query,
+                        "locationBias": {
+                            "circle": {
+                                "center": {
+                                    "latitude": lat,
+                                    "longitude": lng
+                                },
+                                "radius": 50000.0  # 50 km en metros
+                            }
+                        },
+                        "languageCode": "es",
+                        "maxResultCount": 5
+                    }
+
+                    logger.debug(f"Llamando Places API (New): {places_url}")
+                    places_response = requests.post(
+                        places_url,
+                        json=request_body,
+                        headers=headers,
+                        timeout=15
+                    )
+                    places_response.raise_for_status()
+                    places_data = places_response.json()
+
+                    results = places_data.get('places', [])
+                    logger.debug(f"  → Encontrados {len(results)} resultado(s)")
+
+                    # Agregar a la lista global (evitar duplicados por place_id)
+                    existing_ids = {p.get('id') for p in all_places}
+                    new_places = [p for p in results if p.get('id') not in existing_ids]
+                    all_places.extend(new_places)
+
+                    logger.debug(f"  → {len(new_places)} nuevo(s), total acumulado: {len(all_places)}")
+
+                    # Si ya encontramos resultados en la primera búsqueda, podemos detenernos
+                    if len(all_places) >= 3:
+                        logger.debug("✅ Suficientes resultados encontrados, deteniendo búsqueda")
+                        break
+
+                except requests.RequestException as search_error:
+                    logger.warning(f"⚠️ Error en búsqueda '{query}': {search_error}")
+                    continue
+                except Exception as search_error:
+                    logger.warning(f"⚠️ Error inesperado en búsqueda '{query}': {search_error}")
+                    continue
+
+            if not all_places:
+                logger.warning(f"⚠️ No se encontraron sucursales de '{marca_moto}' cerca del CP {codigo_postal}")
+                result = {
+                    "status": "success",
+                    "branch": None,
+                    "message": f"No se encontraron sucursales de {marca_moto} en un radio de 50km"
+                }
+                logger.debug(f"Retornando sin resultados: {result}")
+                return result
+
+            logger.info(f"✅ Total de sucursales encontradas: {len(all_places)}")
+
+            # Tomar la primera (Places API ya ordena por relevancia/distancia)
+            nearest_place = all_places[0]
+
+            logger.debug(f"Sucursal más cercana/prominente: {nearest_place.get('displayName', {}).get('text', 'N/A')}")
+
+            # Calcular distancia usando Haversine
+            from math import radians, sin, cos, sqrt, atan2
+
+            place_location = nearest_place.get('location', {})
+            place_lat = place_location.get('latitude', lat)
+            place_lng = place_location.get('longitude', lng)
+
+            # Fórmula de Haversine para distancia entre dos puntos
+            R = 6371  # Radio de la Tierra en km
+
+            lat1, lon1 = radians(lat), radians(lng)
+            lat2, lon2 = radians(place_lat), radians(place_lng)
+
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            distance_km = R * c
+
+            logger.debug(f"Distancia calculada: {distance_km:.2f} km")
+
+            # Construir respuesta estructurada (Places API New tiene estructura diferente)
+            branch_data = {
+                "name": nearest_place.get('displayName', {}).get('text', 'N/A'),
+                "address": nearest_place.get('formattedAddress', 'N/A'),
+                "phone": nearest_place.get('nationalPhoneNumber'),
+                "website": nearest_place.get('websiteUri'),
+                "distance": round(distance_km, 2),
+                "place_id": nearest_place.get('id', 'N/A')
+            }
+
+            result = {
+                "status": "success",
+                "branch": branch_data
+            }
+
+            logger.info(f"🎉 Sucursal encontrada exitosamente: {branch_data['name']}")
+            logger.info(f"   └─ Dirección: {branch_data['address']}")
+            logger.info(f"   └─ Distancia: {branch_data['distance']} km")
+            logger.info(f"   └─ Teléfono: {branch_data['phone'] or 'No disponible'}")
+            logger.debug(f"Retornando resultado: {result}")
+
+            return result
+
+        except requests.RequestException as req_error:
+            error_msg = f"Error de request a Google Maps API: {str(req_error)}"
+            logger.error(error_msg, exc_info=True)
+            result = {
+                "status": "error",
+                "branch": None,
+                "message": error_msg
+            }
+            logger.debug(f"Retornando error: {result}")
+            return result
+
+        except Exception as e:
+            error_msg = f"Error inesperado buscando sucursal: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            result = {
+                "status": "error",
+                "branch": None,
+                "message": error_msg
+            }
+            logger.debug(f"Retornando error: {result}")
+            return result

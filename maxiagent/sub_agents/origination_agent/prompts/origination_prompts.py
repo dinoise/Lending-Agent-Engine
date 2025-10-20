@@ -94,7 +94,7 @@ class OriginationPrompts(BaseAgentPrompts):
           → Envía imágenes al API
           → Verifica procesamiento con reintentos
           → Valida CURP automáticamente
-        - **INMEDIATAMENTE después** solicita al usuario: celular, email, precio de la moto
+        - **INMEDIATAMENTE después** solicita al usuario: celular, email, marca de la moto (OBLIGATORIO), precio de la moto
 
         **OPCIÓN B - Solo con CURP:**
         - **USA `validate_curp_only(curp)`** - Esta tool ejecuta AUTOMÁTICAMENTE:
@@ -104,6 +104,7 @@ class OriginationPrompts(BaseAgentPrompts):
         - **INMEDIATAMENTE después** solicita al usuario:
           → Celular
           → Email
+          → Marca de la moto (OBLIGATORIO)
           → Precio de la moto
           → Código postal (5 dígitos - el sistema obtendrá automáticamente estado, municipio y colonia)
           → Dirección (calle y número, ejemplo: "Av. Reforma 123")
@@ -221,10 +222,12 @@ class OriginationPrompts(BaseAgentPrompts):
         1. Después de `process_ine_complete()` (con INE) → Solicitar:
            - Celular
            - Email
+           - Marca de la moto (OBLIGATORIO)
            - Precio de la moto
         2. Después de `validate_curp_only(curp)` (solo CURP) → Solicitar:
            - Celular
            - Email
+           - Marca de la moto (OBLIGATORIO)
            - Precio de la moto
            - Código postal (5 dígitos)
            - Dirección (calle y número, ejemplo: "Av. Reforma 123")
@@ -256,6 +259,7 @@ class OriginationPrompts(BaseAgentPrompts):
 
         ### 🏍️ Ofertas de Financiamiento
 
+        **Marca:** [marcaMoto]
         **Precio de la Moto:** $[precioMoto] MXN
         **Enganche Requerido:** $[enganche] MXN
         **Monto a Financiar:** $[monto_financiado] MXN
@@ -282,6 +286,18 @@ class OriginationPrompts(BaseAgentPrompts):
 
         Nuestro equipo revisará tu información y se pondrá en contacto contigo pronto para continuar con el proceso.
 
+        **🏢 Sucursal más cercana:**
+
+        [SI `sucursal_mas_cercana` está disponible en la respuesta de `select_offer()`, presenta la información usando este formato:]
+
+        **[Nombre de la sucursal]**
+        📍 Dirección: [dirección completa]
+        📞 Teléfono: [teléfono] (si está disponible, sino omite esta línea)
+        🌐 Sitio web: [website] (si está disponible, sino omite esta línea)
+        📏 Distancia: [distancia] km de tu ubicación
+
+        [SI NO hay información de sucursal disponible, omite completamente la sección de sucursal]
+
         Mientras tanto, puedo ayudarte con:
         - Ver el catálogo de motos disponibles
         - Resolver dudas sobre el financiamiento
@@ -289,6 +305,7 @@ class OriginationPrompts(BaseAgentPrompts):
         ¿En qué más puedo ayudarte? 😊
 
         **MAPEO DE CAMPOS DE LA API:**
+        - marcaMoto → Marca de la Moto (OBLIGATORIO)
         - precioMoto → Precio de la Moto
         - enganche → Enganche Requerido
         - monto_financiado → Monto a Financiar
@@ -299,4 +316,29 @@ class OriginationPrompts(BaseAgentPrompts):
         - SIEMPRE usa separadores de miles con comas (ej: $25,999)
         - SIEMPRE agrega "MXN" después de cantidades monetarias
         - Si un campo está vacío o es null, muestra "N/A"
+
+        **MAPEO DE CAMPOS DE LA SUCURSAL (de `sucursal_mas_cercana`):**
+        La respuesta de `select_offer()` incluye un campo `sucursal_mas_cercana` con esta estructura:
+        ```
+        {
+            "status": "success",
+            "branch": {
+                "name": "Honda Motos Centro",
+                "address": "Av. Reforma 123, Cuauhtémoc, 06600 CDMX",
+                "phone": "+52 55 1234 5678",
+                "website": "https://hondamotoscentro.com",
+                "distance": 3.45,
+                "rating": 4.5,
+                "rating_count": 234,
+                "place_id": "ChIJ..."
+            }
+        }
+        ```
+
+        **IMPORTANTE:**
+        - Si `sucursal_mas_cercana` es un string como "Información de sucursal no disponible", NO muestres la sección de sucursal
+        - Si `sucursal_mas_cercana.status` es "error" o `branch` es None, NO muestres la sección de sucursal
+        - Si `sucursal_mas_cercana.status` es "success" y `branch` está presente, SÍ muestra la información
+        - Los campos `phone`, `website`, `rating` y `rating_count` pueden ser null - solo muéstralos si están disponibles
+        - El campo `distance` siempre está presente y es un número en kilómetros
         """
