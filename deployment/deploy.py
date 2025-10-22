@@ -97,6 +97,9 @@ class VertexAgentManager:
                 "URL_DATA_MAXI_PROD",
                 "USRNAME_DATA_MAXI_PROD",
                 "PASSWORD_DATA_MAXI_PROD",
+                "URL_CREDITOS_MAXI_PROD",
+                "USRNAME_CREDITOS_MAXI_PROD",
+                "PASSWORD_CREDITOS_MAXI_PROD",
                 "ADK_ARTIFACT_BUCKET",
                 "AGENT_CHAT_URL_PROD"
             ]
@@ -118,6 +121,9 @@ class VertexAgentManager:
                 "URL_DATA_MAXI_DEV",
                 "USRNAME_DATA_MAXI_DEV",
                 "PASSWORD_DATA_MAXI_DEV",
+                "URL_CREDITOS_MAXI_DEV",
+                "USRNAME_CREDITOS_MAXI_DEV",
+                "PASSWORD_CREDITOS_MAXI_DEV",
                 "ADK_ARTIFACT_BUCKET",
                 "AGENT_CHAT_URL_DEV"
             ]

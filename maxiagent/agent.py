@@ -11,7 +11,8 @@ from .core import settings
 # Import sub-agents
 from .sub_agents import (credit_advice_agent,
                         catalog_agent,
-                        origination_agent)
+                        origination_agent,
+                        account_statement_agent)
 
 from google.adk.agents import Agent
 from google.genai import types
@@ -25,8 +26,8 @@ root_agent = Agent(
     instruction=prompts.get_full_prompt(),
     global_instruction=prompts.get_global_instruction(),
     sub_agents=[credit_advice_agent,
-                # calculation_agent,
                 catalog_agent,
-                origination_agent],
+                origination_agent,
+                account_statement_agent],
     generate_content_config=types.GenerateContentConfig(temperature=0.05)
 )
