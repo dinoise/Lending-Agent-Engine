@@ -164,6 +164,21 @@ class Settings(BaseSettings):
         description="Agent chat URL for development"
     )
 
+    URL_CREDITOS_MAXI_DEV: str | None = Field(
+        default=None,
+        description="Creditos Maxi URL for development"
+    )
+
+    USRNAME_CREDITOS_MAXI_DEV: str | None = Field(
+        default=None,
+        description="Creditos Maxi username for development"
+    )
+
+    PASSWORD_CREDITOS_MAXI_DEV: str | None = Field(
+        default=None,
+        description="Creditos Maxi password for development"
+    )
+
     # ==================== Production API URLs ====================
     URL_CALCULADORA_PROD: str | None = Field(
         default=None,
@@ -208,6 +223,21 @@ class Settings(BaseSettings):
     AGENT_CHAT_URL_PROD: str | None = Field(
         default=None,
         description="Agent chat URL for production"
+    )
+
+    URL_CREDITOS_MAXI_PROD: str | None = Field(
+        default=None,
+        description="Creditos Maxi URL for production"
+    )
+
+    USRNAME_CREDITOS_MAXI_PROD: str | None = Field(
+        default=None,
+        description="Creditos Maxi username for production"
+    )
+
+    PASSWORD_CREDITOS_MAXI_PROD: str | None = Field(
+        default=None,
+        description="Creditos Maxi password for production"
     )
 
     # ==================== Computed Properties ====================
@@ -289,6 +319,24 @@ class Settings(BaseSettings):
     def AGENT_CHAT_URL(self) -> str | None:
         """Get the appropriate agent chat URL based on environment."""
         return self.AGENT_CHAT_URL_PROD if self.ENV == "prod" else self.AGENT_CHAT_URL_DEV
+
+    @computed_field
+    @property
+    def URL_CREDITOS_MAXI(self) -> str | None:
+        """Get the appropriate Creditos Maxi URL based on environment."""
+        return self.URL_CREDITOS_MAXI_PROD if self.ENV == "prod" else self.URL_CREDITOS_MAXI_DEV
+
+    @computed_field
+    @property
+    def USRNAME_CREDITOS_MAXI(self) -> str | None:
+        """Get the appropriate Creditos Maxi username based on environment."""
+        return self.USRNAME_CREDITOS_MAXI_PROD if self.ENV == "prod" else self.USRNAME_CREDITOS_MAXI_DEV
+
+    @computed_field
+    @property
+    def PASSWORD_CREDITOS_MAXI(self) -> str | None:
+        """Get the appropriate Creditos Maxi password based on environment."""
+        return self.PASSWORD_CREDITOS_MAXI_PROD if self.ENV == "prod" else self.PASSWORD_CREDITOS_MAXI_DEV
 
     # Backwards compatibility aliases
     @computed_field
