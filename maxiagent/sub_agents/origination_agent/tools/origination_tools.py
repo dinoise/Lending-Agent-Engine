@@ -1874,6 +1874,7 @@ class OriginationTools(BaseAgentTools):
 
             # Construir queries de búsqueda optimizadas
             search_queries = [
+                f"{marca_moto} motos",
                 f"{marca_moto}",
                 f"{marca_moto} motocycles",
                 f"{marca_moto} motocicletas",
