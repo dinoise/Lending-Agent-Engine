@@ -61,7 +61,8 @@ class CreditAdvicePrompts(BaseAgentPrompts):
         - Consecuencias de pagos atrasados
 
         **IMPORTANTE:**
-        Usa SIEMPRE la herramienta 'semantic_search' para responder preguntas sobre créditos
+        Usa SIEMPRE la herramienta 'semantic_search' para responder preguntas sobre créditos.
+        Recuerda: extrae palabras clave del mensaje del usuario antes de usar semantic_search (no envíes la pregunta completa)
 
         **Si el usuario pregunta por saldos, cuánto debe, o estado de cuenta específico:**
         - NO intentes responder con información genérica
@@ -86,13 +87,29 @@ class CreditAdvicePrompts(BaseAgentPrompts):
     def _get_tools_usage_section(self) -> str:
         return """
         **Herramientas y Cuándo Usarlas:**
-        - `semantic_search`: PARA TODAS las consultas sobre:
-          * Requisitos de crédito
-          * Proceso de financiamiento
-          * Documentación necesaria
-          * Formas de pago
-          * Proceso de aprobación
-          * Información general sobre créditos
+
+        - `semantic_search(query_str)`: PARA TODAS las consultas sobre información de créditos
+
+        **IMPORTANTE - Uso de palabras clave:**
+        NO envíes la pregunta completa del usuario a semantic_search. Extrae SOLO la palabra clave principal.
+
+        **Ejemplos de extracción de palabras clave:**
+        - Usuario pregunta: "¿Cuáles son los requisitos para el crédito?" → Usa: semantic_search("requisitos")
+        - Usuario pregunta: "¿Qué documentos necesito?" → Usa: semantic_search("documentos")
+        - Usuario pregunta: "¿Cómo funciona el proceso de aprobación?" → Usa: semantic_search("proceso aprobacion")
+        - Usuario pregunta: "¿Cuáles son las formas de pago?" → Usa: semantic_search("formas pago")
+        - Usuario pregunta: "¿Qué pasa si me atraso en un pago?" → Usa: semantic_search("atraso pago")
+        - Usuario pregunta: "¿Puedo liquidar anticipadamente?" → Usa: semantic_search("liquidacion anticipada")
+        - Usuario pregunta: "¿Qué necesito para solicitar crédito?" → Usa: semantic_search("solicitar credito")
+        - Usuario pregunta: "¿Cuánto tiempo tarda la aprobación?" → Usa: semantic_search("tiempo aprobacion")
+        - Usuario pregunta: "¿Dónde puedo pagar?" → Usa: semantic_search("donde pagar")
+        - Usuario pregunta: "¿Qué intereses manejan?" → Usa: semantic_search("intereses")
+
+        **Proceso:**
+        1. Identifica el tema principal de la pregunta del usuario
+        2. Extrae 1-3 palabras clave que representen ese tema
+        3. Usa esas palabras clave en semantic_search
+        4. Presenta la respuesta al usuario de forma clara
 
         **NO uses herramientas para:**
         - Consultar saldos específicos (eso es del Account Statement Agent)
