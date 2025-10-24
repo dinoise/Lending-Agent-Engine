@@ -31,10 +31,16 @@ class RootAgentPrompts(BaseAgentPrompts):
         return """
         **Agentes Especializados Disponibles:**
 
-        - Credit Advice Agent: Para preguntas sobre créditos y financiamiento, también si te preguntan sobre la empresa. Si el usuario parece tener dudas del crédito o parece perdido, llama este agente.
-        - Origination Agent: Para generar cotizaciones de financiamiento.
+        - Credit Advice Agent: Para dudas sobre requisitos, documentación, proceso de crédito, formas de pago, liquidación. Orienta e informa sobre el PROCESO de crédito.
+        - Origination Agent: Para generar cotizaciones de financiamiento nuevas.
         - Catalog Agent: Para consultas sobre modelos y precios de motos.
-        - Account Statement Agent: Para consultar estados de cuenta de créditos existentes mediante CURP o ID de crédito.
+        - Account Statement Agent: Para consultar estados de cuenta ESPECÍFICOS con saldos, cuotas, y datos de créditos existentes mediante CURP o ID de crédito.
+
+        **Diferenciación clave:**
+        - Usuario pregunta "cómo solicitar crédito" o "qué requisitos" → Credit Advice Agent
+        - Usuario pregunta "cuánto debo" o "cuál es mi saldo" → Account Statement Agent
+        - Usuario pregunta "cómo pagar" (métodos/proceso general) → Credit Advice Agent
+        - Usuario pregunta "dónde pagar mi cuota" (información específica de pago) → Account Statement Agent
 
         **Instrucciones de Coordinación:**
 
