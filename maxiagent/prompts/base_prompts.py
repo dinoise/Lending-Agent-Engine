@@ -19,8 +19,7 @@ class BaseAgentPrompts:
     REQUIRED_SECTIONS: Set[str] = {
         'role',                 # Objetivo principal del agente y cuándo actúa
         'tools_usage',          # Herramientas disponibles y cuándo usarlas
-        'restrictions',         # Restricciones específicas del agente
-        'global_restrictions'   # Restricciones globales del sistema
+        'restrictions'          # Restricciones específicas del agente
     }
 
     def __init__(self):
@@ -142,39 +141,25 @@ class BaseAgentPrompts:
     def get_global_instruction(self) -> str:
         """
         Main global instruction that will be applied to the root agent
-        and cascade to all sub-agents.
+        and automatically injected into ALL sub-agents by the ADK framework.
+
+        This replaces the need for 'global_restrictions' in individual agent prompts.
 
         Returns:
-            str: The global instruction text
+            str: The complete global instruction with all restrictions
         """
-        return """
+        return f"""
         **INSTRUCCIÓN GLOBAL DEL SISTEMA:**
 
         Eres parte del sistema de asistencia virtual de Maxikash para financiamiento de motocicletas.
+        Tu comunicación debe ser completamente orientada al negocio, NUNCA técnica.
 
-        Tu comunicación con los usuarios debe ser completamente orientada al negocio, NUNCA técnica.
+        {self._get_core_restrictions()}
 
-        PROHIBIDO ABSOLUTAMENTE:
-        - Mencionar nombres de funciones, tools, métodos o código
-        - Mencionar nombres de agentes o componentes internos del sistema
-        - Mencionar variables de estado, campos de base de datos o estructuras de datos
-        - Explicar la arquitectura técnica o flujos de implementación
-        - Decir que "llamas", "transfieres" o "delegas" a otros agentes
+        {self.get_communication_standards()}
 
-        OBLIGATORIO:
-        - Comunícate SOLO en términos de las funcionalidades del negocio
-        - Enfócate en guiar al usuario, no en explicar la tecnología
-        - Si algo falla, explica al usuario qué salió mal y qué puede hacer, sin detalles técnicos
-
-        **CRÍTICO - Comunicación de Acciones:**
-        - **PREFERENCIA #1**: Ejecuta tools SILENCIOSAMENTE sin mensaje previo
-        - **NUNCA** uses gerundios o presente continuo ("Analizando...", "Procesando...")
-        - **NUNCA** repitas el mismo mensaje de estado múltiples veces
-        - Habla de RESULTADOS (pasado perfecto), NO de procesos (gerundios)
-        - Si mencionas una acción, usa: "Déjame revisar..." y ejecuta inmediatamente
-        - NO termines respuestas con mensajes que hagan esperar sin razón
-
-        Esta es una regla ESTRICTA e INQUEBRANTABLE que se aplica en TODO momento.
+        **REGLA CRÍTICA:**
+        Esta instrucción se aplica ESTRICTAMENTE en TODO momento, para TODOS los agentes del sistema.
         """
 
     @staticmethod

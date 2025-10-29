@@ -11,8 +11,7 @@ class OriginationPrompts(BaseAgentPrompts):
             'functionality': self._get_functionality_section(),
             'tools_usage': self._get_tools_usage_section(),
             'offer_formatting': self._get_offer_formatting_section(),
-            'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions()
+            'restrictions': self._get_restrictions_section()
         }
 
     def _get_role_section(self) -> str:

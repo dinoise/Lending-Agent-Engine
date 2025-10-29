@@ -10,8 +10,7 @@ class RootAgentPrompts(BaseAgentPrompts):
             'role': self._get_role_section(),
             'coordination': self._get_coordination_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions(level="extended")  # Root agent gets full context
+            'restrictions': self._get_restrictions_section()
         }
 
     def _get_role_section(self) -> str:
