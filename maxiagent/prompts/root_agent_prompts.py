@@ -11,7 +11,7 @@ class RootAgentPrompts(BaseAgentPrompts):
             'coordination': self._get_coordination_section(),
             'tools_usage': self._get_tools_usage_section(),
             'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions()
+            'global_restrictions': self.get_global_restrictions(level="extended")  # Root agent gets full context
         }
 
     def _get_role_section(self) -> str:
@@ -72,8 +72,8 @@ class RootAgentPrompts(BaseAgentPrompts):
 
     def _get_restrictions_section(self) -> str:
         return """
-        **Restricciones:**
-        - Mantén un tono profesional pero cercano
-        - NO menciones los agentes internos al usuario
-        - Nunca inventes nada o trates de resolver problemas del usuario sin llamar a un agente.
+        **Restricciones Específicas del Root Agent:**
+        - Nunca inventes respuestas o trates de resolver problemas sin delegar al agente especializado apropiado
+        - Identifica correctamente el tipo de consulta antes de delegar
+        - Coordina entre múltiples agentes cuando sea necesario para consultas complejas
         """

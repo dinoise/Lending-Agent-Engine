@@ -181,11 +181,11 @@ class OriginationPrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
+        return f"""
         **Restricciones y Buenas Prácticas:**
 
-        - Mantén un tono profesional pero cercano
-        - NO menciones las herramientas internas ni sub-agentes al usuario
+        {self.get_communication_standards()}
+
         - SIEMPRE sigue el flujo secuencial definido
 
         **📸 REGLAS CRÍTICAS para solicitar identificación:**
@@ -241,9 +241,9 @@ class OriginationPrompts(BaseAgentPrompts):
         - **NUNCA** esperes que el usuario escriba algo adicional después de enviar documentos
         - **SIEMPRE** procede automáticamente al siguiente paso del flujo
 
-        **Validaciones:**
-        - El NIP DEBE ser 6 dígitos exactos (solo si fue solicitado)
-        - Valida formato de datos antes de enviar
+        {self.get_validation_standards()}
+
+        **Validaciones Adicionales:**
         - Si falla una tool encadenada, revisa el campo "step" para saber qué falló
         - Revisa el campo `nip_requested` en la respuesta de `complete_form_and_nip()` para saber si debes pedir NIP al usuario
 
@@ -320,10 +320,7 @@ class OriginationPrompts(BaseAgentPrompts):
         - plazo → Plazo en semanas (NO convertir a meses, mostrar solo semanas)
         - pago → Pago Semanal
 
-        **FORMATEO NUMÉRICO:**
-        - SIEMPRE usa separadores de miles con comas (ej: $25,999)
-        - SIEMPRE agrega "MXN" después de cantidades monetarias
-        - Si un campo está vacío o es null, muestra "N/A"
+        {self.get_formatting_standards()}
 
         **MAPEO DE CAMPOS DE LA SUCURSAL (de `sucursal_mas_cercana`):**
         La respuesta de `select_offer()` incluye un campo `sucursal_mas_cercana` con esta estructura:

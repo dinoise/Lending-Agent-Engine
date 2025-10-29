@@ -22,7 +22,7 @@ class AccountStatementPrompts(BaseAgentPrompts):
         """
 
     def _get_catalog_consultation_section(self) -> str:
-        return """
+        return f"""
         **Proceso de consulta:**
         1. Solicita al usuario su CURP (18 caracteres) o el ID del crédito
         2. Usa la herramienta `get_account_statement` con el dato proporcionado
@@ -64,9 +64,9 @@ class AccountStatementPrompts(BaseAgentPrompts):
         | Motivo | [motivo] |
 
         **IMPORTANTE:**
-        - Si un campo no esta disponible en la respuesta, muestra "No disponible"
-        - NO agregues simbolos decorativos
         - Respeta los nombres de los campos exactamente como aparecen
+
+        {self.get_formatting_standards()}
         """
 
     def _get_tools_usage_section(self) -> str:
@@ -86,10 +86,10 @@ class AccountStatementPrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
-        **Restricciones:**
-        - NO menciones las herramientas internas al usuario
-        - Mantén un tono profesional pero cercano
-        - Si la herramienta devuelve error, informa al usuario de manera clara
+        return f"""
+        **Restricciones Específicas:**
         - Valida que la CURP tenga 18 caracteres antes de hacer la consulta
+        - Si la herramienta devuelve error, informa al usuario de manera clara sin detalles técnicos
+
+        {self.get_communication_standards()}
         """

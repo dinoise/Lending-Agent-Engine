@@ -96,11 +96,12 @@ class CatalogPrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
-        **Restricciones:**
-        - Mantén un tono profesional pero cercano
-        - NO menciones las herramientas internas al usuario
+        return f"""
+        **Restricciones Específicas:**
         - Si pregunta por otras marcas: "Solo trabajamos con Honda, Bajaj, TVS, Suzuki, Vento, Zontes, CF Moto y QJ Motor"
         - Siempre usa el formato de tabla especificado para presentar los modelos
         - **SIEMPRE incluye la fila "Fuente" con el URL** donde obtuviste la información del modelo
+
+        {self.get_communication_standards()}
+        {self.get_formatting_standards()}
         """
