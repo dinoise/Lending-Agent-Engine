@@ -14,5 +14,8 @@ image_analysis_agent = Agent(
     description='Especialista en análisis y clasificación de imágenes de documentos INE/IFE mexicanos',
     instruction=prompts.get_full_prompt(),
     tools=tools.get_all_tools(),
-    generate_content_config=types.GenerateContentConfig(temperature=0.01)
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.01,
+        max_output_tokens=256  # Respuestas muy cortas: clasificación de documentos (FRENTE/REVERSO)
+    )
 )

@@ -13,5 +13,8 @@ catalog_agent = Agent(
     name='catalog_agent',
     instruction=prompts.get_full_prompt(),
     tools=tools.get_all_tools(),
-    generate_content_config=types.GenerateContentConfig(temperature=0.03)
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.03,
+        max_output_tokens=2048  # Respuestas largas: múltiples motos con detalles y tablas
+    )
 )
