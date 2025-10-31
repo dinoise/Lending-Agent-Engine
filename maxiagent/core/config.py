@@ -84,6 +84,11 @@ class Settings(BaseSettings):
         description="Root agent model name"
     )
 
+    IMAGE_ANALYSIS_MODEL: str = Field(
+        default="gemini-2.0-flash-001",
+        description="Model for image analysis (optimized for cost: uses more economical model for simple classification)"
+    )
+
     # ==================== RAG Configuration ====================
     RAG_CORPUS: str | None = Field(
         default=None,
