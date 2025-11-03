@@ -10,8 +10,7 @@ class ImageAnalysisPrompts(BaseAgentPrompts):
             'role': self._get_role_section(),
             'functionality': self._get_functionality_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions()
+            'restrictions': self._get_restrictions_section()
         }
 
     def get_ine_analysis_prompt(self) -> str:
@@ -118,7 +117,7 @@ class ImageAnalysisPrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
+        return f"""
         **Restricciones y Buenas Prácticas:**
 
         - Mantén un enfoque técnico y preciso
@@ -129,7 +128,9 @@ class ImageAnalysisPrompts(BaseAgentPrompts):
         - Usa nomenclatura estándar para artifacts
         - Documenta nivel de confianza en cada análisis
         - En caso de duda, marca como INDETERMINADO
-        - Cuando el proceso se termina, vuelves al agente que te llamó.
+        - Cuando el proceso se termina, vuelves al agente que te llamó
+
+        {self.get_communication_standards()}
 
         **Datos que mantienes:**
         - Tipo de documento (FRENTE/REVERSO/INDETERMINADO)

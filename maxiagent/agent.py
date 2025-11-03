@@ -29,5 +29,8 @@ root_agent = Agent(
                 catalog_agent,
                 origination_agent,
                 account_statement_agent],
-    generate_content_config=types.GenerateContentConfig(temperature=0.05)
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.05,
+        max_output_tokens=512  # Límite de tokens para optimizar costos - respuestas de coordinación
+    )
 )

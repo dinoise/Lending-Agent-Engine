@@ -10,8 +10,7 @@ class CreditAdvicePrompts(BaseAgentPrompts):
             'role': self._get_role_section(),
             'credit_advice': self._get_credit_advice_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions()
+            'restrictions': self._get_restrictions_section()
         }
 
     def _get_role_section(self) -> str:
@@ -117,11 +116,9 @@ class CreditAdvicePrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
-        **Restricciones:**
-        - NUNCA uses búsqueda web para temas de crédito o financiamiento
-        - Mantén un tono profesional pero cercano
-        - NO menciones las herramientas internas al usuario
+        return f"""
+        **Restricciones Específicas:**
+        - NUNCA uses búsqueda web para temas de crédito o financiamiento (usa semantic_search)
         - Para preguntas fuera de tema: "En Maxikash nos especializamos en financiamiento para motos de trabajo"
         - NO promociones otros financiadores que no sean Maxikash
 
@@ -129,4 +126,6 @@ class CreditAdvicePrompts(BaseAgentPrompts):
         - Si te preguntan "cuánto debo" o "cuál es mi saldo": Redirige a consulta de estado de cuenta
         - Si te preguntan "cómo pagar" o "dónde pagar": Sí puedes responder con información general
         - Tu rol es informar sobre el PROCESO, no consultar DATOS ESPECÍFICOS de cuentas
+
+        {self.get_communication_standards()}
         """

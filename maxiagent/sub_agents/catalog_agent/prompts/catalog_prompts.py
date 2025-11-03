@@ -10,8 +10,7 @@ class CatalogPrompts(BaseAgentPrompts):
             'role': self._get_role_section(),
             'catalog_consultation': self._get_catalog_consultation_section(),
             'tools_usage': self._get_tools_usage_section(),
-            'restrictions': self._get_restrictions_section(),
-            'global_restrictions': self.get_global_restrictions()
+            'restrictions': self._get_restrictions_section()
         }
 
     def _get_role_section(self) -> str:
@@ -96,11 +95,12 @@ class CatalogPrompts(BaseAgentPrompts):
         """
 
     def _get_restrictions_section(self) -> str:
-        return """
-        **Restricciones:**
-        - Mantén un tono profesional pero cercano
-        - NO menciones las herramientas internas al usuario
+        return f"""
+        **Restricciones Específicas:**
         - Si pregunta por otras marcas: "Solo trabajamos con Honda, Bajaj, TVS, Suzuki, Vento, Zontes, CF Moto y QJ Motor"
         - Siempre usa el formato de tabla especificado para presentar los modelos
         - **SIEMPRE incluye la fila "Fuente" con el URL** donde obtuviste la información del modelo
+
+        {self.get_communication_standards()}
+        {self.get_formatting_standards()}
         """

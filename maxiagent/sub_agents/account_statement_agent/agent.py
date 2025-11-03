@@ -13,5 +13,8 @@ account_statement_agent = Agent(
     name='account_statement_agent',
     instruction=prompts.get_full_prompt(),
     tools=tools.get_all_tools(),
-    generate_content_config=types.GenerateContentConfig(temperature=0.03)
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.03,
+        max_output_tokens=512  # Respuestas cortas: tabla de estado de cuenta
+    )
 )

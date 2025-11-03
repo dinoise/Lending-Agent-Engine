@@ -400,13 +400,16 @@ class ImageAnalysisTools(BaseAgentTools):
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
 
-                model: str | None = settings.ROOT_AGENT_MODEL
+                # Usar modelo optimizado para análisis de imágenes (más económico)
+                model: str = settings.IMAGE_ANALYSIS_MODEL or settings.ROOT_AGENT_MODEL
                 if not model:
                     return {
                         "status": "error",
                         "type": "unknown",
                         "message": f"No model defined"
                     }
+
+                logger.debug(f"🎯 Usando modelo: {model}")
 
                 # Crear un nuevo cliente en cada intento para evitar problemas
                 client: genai.Client = self._get_genai_client()
@@ -444,13 +447,15 @@ class ImageAnalysisTools(BaseAgentTools):
 
                 logger.debug(f"🤖 Enviando imagen al modelo {model} para análisis (intento {attempt + 1})")
 
-                # Usar la interfaz asíncrona del SDK
+                # Usar la interfaz asíncrona del SDK con optimizaciones de costo
                 response: types.GenerateContentResponse = await client.aio.models.generate_content(
                     model=model,
                     contents=contents,
                     config=types.GenerateContentConfig(
                         safety_settings=safety_settings,
-                        temperature=0.01
+                        temperature=0.01,
+                        max_output_tokens=50,  # solo necesitamos "FRENTE", "REVERSO" o "INDETERMINADO"
+                        media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM  # reduce tokens de imagen
                     )
                 )
 
