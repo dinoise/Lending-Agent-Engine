@@ -1,0 +1,118 @@
+name: CI/CD for Vertex AI Agent Engine
+
+on:
+  push:
+    paths:
+      - 'maxiagent/**'
+    branches:
+      - master
+      - dev
+
+jobs:
+  deploy-agent-engine:
+    name: Deploy Agent Engine
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Instalando dependencias Python..."
+          python -m pip install --upgrade pip
+          pip install google-cloud-aiplatform[adk,agent-engines] google-adk python-dotenv beautifulsoup4
+          echo "✅ Dependencias instaladas"
+
+      - name: Deploy Agent Engine (Production - Update)
+        if: ${{ github.ref == 'refs/heads/master' }}
+        env:
+          ENV: prod
+          AGENT_ENGINE_ID: ${{ secrets.AGENT_ENGINE_ID }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+          STAGING_BUCKET: ${{ secrets.STAGING_BUCKET }}
+          RAG_CORPUS: ${{ secrets.RAG_CORPUS }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
+          ADK_ARTIFACT_BUCKET: ${{ secrets.ADK_ARTIFACT_BUCKET }}
+          URL_CALCULADORA_PROD: ${{ secrets.URL_CALCULADORA_PROD }}
+          KEY_CALCULADORA_PROD: ${{ secrets.KEY_CALCULADORA_PROD }}
+          URL_ORIGINADOR_PROD: ${{ secrets.URL_ORIGINADOR_PROD }}
+          KEY_ORIGINADOR_PROD: ${{ secrets.KEY_ORIGINADOR_PROD }}
+          API_LENDING_PROD: ${{ secrets.API_LENDING_PROD }}
+          URL_DATA_MAXI_PROD: ${{ secrets.URL_DATA_MAXI_PROD }}
+          USRNAME_DATA_MAXI_PROD: ${{ secrets.USRNAME_DATA_MAXI_PROD }}
+          PASSWORD_DATA_MAXI_PROD: ${{ secrets.PASSWORD_DATA_MAXI_PROD }}
+          URL_CREDITOS_MAXI_PROD: ${{ secrets.URL_CREDITOS_MAXI_PROD }}
+          USRNAME_CREDITOS_MAXI_PROD: ${{ secrets.USRNAME_CREDITOS_MAXI_PROD }}
+          PASSWORD_CREDITOS_MAXI_PROD: ${{ secrets.PASSWORD_CREDITOS_MAXI_PROD }}
+          AGENT_CHAT_URL_PROD: ${{ secrets.AGENT_CHAT_URL_PROD }}
+          CLOUD_VAR: true
+
+        run: |
+          echo "🚀 Iniciando despliegue en producción..."
+          echo "🔧 Variables de entorno configuradas"
+          python -m deployment/deploy.py --update --resource-id ${{ secrets.AGENT_ENGINE_ID }} --env prod
+          echo "✅ Despliegue de producción completado"
+
+      - name: Deploy Agent Engine (Development - Update)
+        if: ${{ github.ref == 'refs/heads/dev' }}
+        env:
+          ENV: dev
+          AGENT_ENGINE_ID: ${{ secrets.AGENT_ENGINE_ID_DEV }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+          STAGING_BUCKET: ${{ secrets.STAGING_BUCKET }}
+          RAG_CORPUS: ${{ secrets.RAG_CORPUS }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          ROOT_AGENT_MODEL: ${{ secrets.ROOT_AGENT_MODEL }}
+          ADK_ARTIFACT_BUCKET: ${{ secrets.ADK_ARTIFACT_BUCKET }}
+          URL_CALCULADORA_DEV: ${{ secrets.URL_CALCULADORA_DEV }}
+          KEY_CALCULADORA_DEV: ${{ secrets.KEY_CALCULADORA_DEV }}
+          URL_ORIGINADOR_DEV: ${{ secrets.URL_ORIGINADOR_DEV }}
+          KEY_ORIGINADOR_DEV: ${{ secrets.KEY_ORIGINADOR_DEV }}
+          API_LENDING_DEV: ${{ secrets.API_LENDING_DEV }}
+          URL_DATA_MAXI_DEV: ${{ secrets.URL_DATA_MAXI_DEV }}
+          USRNAME_DATA_MAXI_DEV: ${{ secrets.USRNAME_DATA_MAXI_DEV }}
+          PASSWORD_DATA_MAXI_DEV: ${{ secrets.PASSWORD_DATA_MAXI_DEV }}
+          URL_CREDITOS_MAXI_DEV: ${{ secrets.URL_CREDITOS_MAXI_DEV }}
+          USRNAME_CREDITOS_MAXI_DEV: ${{ secrets.USRNAME_CREDITOS_MAXI_DEV }}
+          PASSWORD_CREDITOS_MAXI_DEV: ${{ secrets.PASSWORD_CREDITOS_MAXI_DEV }}
+          AGENT_CHAT_URL_DEV: ${{ secrets.AGENT_CHAT_URL_DEV }}
+          CLOUD_VAR: true
+
+        run: |
+          echo "🚀 Iniciando despliegue en desarrollo..."
+          echo "🔧 Variables de entorno configuradas"
+          python deployment/deploy.py --update --resource-id ${{ secrets.AGENT_ENGINE_ID_DEV }} --env dev
+          echo "✅ Despliegue de desarrollo completado"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: |
+            ${{ github.workspace }}/*.log
+            /tmp/*.log
