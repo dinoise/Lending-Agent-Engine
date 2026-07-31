@@ -3,7 +3,7 @@ name = "maxiagent"
 version = "0.0.5"
 description = "Agent that answers questions about credits, calculates quotations and search catalogs of motorcycles in Google"
 authors = [
-        { name = "Hector Aguilar", email = "hector.aguilar@estrategia52.com" },
+        { name = "dinoise", email = "dinoise0@pm.me" },
 ]
 
 license = "Apache License 2.0"
