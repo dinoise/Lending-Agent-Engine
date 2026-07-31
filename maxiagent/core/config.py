@@ -144,9 +144,9 @@ class Settings(BaseSettings):
         description="Originator API key for development"
     )
 
-    API_MAXIKASH_DEV: str | None = Field(
+    API_LENDING_DEV: str | None = Field(
         default=None,
-        description="Maxikash API URL for development"
+        description="Lending API URL for development"
     )
 
     URL_DATA_MAXI_DEV: str | None = Field(
@@ -205,9 +205,9 @@ class Settings(BaseSettings):
         description="Originator API key for production"
     )
 
-    API_MAXIKASH_PROD: str | None = Field(
+    API_LENDING_PROD: str | None = Field(
         default=None,
-        description="Maxikash API URL for production"
+        description="Lending API URL for production"
     )
 
     URL_DATA_MAXI_PROD: str | None = Field(
@@ -297,9 +297,9 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def API_MAXIKASH(self) -> str | None:
-        """Get the appropriate Maxikash API URL based on environment."""
-        return self.API_MAXIKASH_PROD if self.ENV == "prod" else self.API_MAXIKASH_DEV
+    def API_LENDING(self) -> str | None:
+        """Get the appropriate Lending API URL based on environment."""
+        return self.API_LENDING_PROD if self.ENV == "prod" else self.API_LENDING_DEV
 
     @computed_field
     @property

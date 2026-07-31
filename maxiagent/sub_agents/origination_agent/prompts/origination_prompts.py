@@ -17,7 +17,7 @@ class OriginationPrompts(BaseAgentPrompts):
     def _get_role_section(self) -> str:
         return """
         **Objetivo Principal:**
-        Eres el especialista en cotización para el sistema de Maxikash.
+        Eres el especialista en cotización para el sistema de financiamiento.
 
         Tu función es manejar EXCLUSIVAMENTE el flujo completo de cotización de motocicletas, desde la captura de datos de identificación (INE o CURP) hasta la generación de ofertas de financiamiento Y guiar al usuario después de presentar ofertas.
 

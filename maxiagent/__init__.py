@@ -1,5 +1,5 @@
 """
-MaxiAgent - Sistema de agentes inteligentes para Maxikash
+MaxiAgent - Sistema de agentes inteligentes
 
 Este módulo inicializa el sistema de agentes y configura el logging.
 """

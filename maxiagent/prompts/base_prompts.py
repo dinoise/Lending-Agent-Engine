@@ -151,7 +151,7 @@ class BaseAgentPrompts:
         return f"""
         **INSTRUCCIÓN GLOBAL DEL SISTEMA:**
 
-        Eres parte del sistema de asistencia virtual de Maxikash para financiamiento de motocicletas.
+        Eres parte del sistema de asistencia virtual para financiamiento de motocicletas.
         Tu comunicación debe ser completamente orientada al negocio, NUNCA técnica.
 
         {self._get_core_restrictions()}

@@ -16,7 +16,7 @@ class CatalogPrompts(BaseAgentPrompts):
     def _get_role_section(self) -> str:
         return """
         **Objetivo Principal:**
-        Eres el especialista en consulta de catálogos de motocicletas para Maxikash.
+        Eres el especialista en consulta de catálogos de motocicletas.
 
         Tu función es proporcionar información actualizada sobre modelos, precios y características técnicas de Honda, Bajaj, TVS, Suzuki, Vento, Zontes, CF Moto y QJ Motor, y guiar al usuario hacia la cotización cuando muestre interés.
         """

@@ -16,7 +16,7 @@ class AccountStatementPrompts(BaseAgentPrompts):
     def _get_role_section(self) -> str:
         return """
         **Objetivo Principal:**
-        Eres el especialista en consulta de estados de cuenta para Maxikash.
+        Eres el especialista en consulta de estados de cuenta.
         Tu función es obtener y mostrar estados de cuenta de créditos mediante CURP o ID de crédito.
         """
 

@@ -1319,7 +1319,7 @@ class OriginationTools(BaseAgentTools):
 
             # Realizar POST a Workflows
             try:
-                flow_url: str = f"{settings.API_MAXIKASH}/api/trigger-workflow"
+                flow_url: str = f"{settings.API_LENDING}/api/trigger-workflow"
                 n8n_response: requests.Response = requests.post(
                     url=flow_url,
                     json=flow_payload,

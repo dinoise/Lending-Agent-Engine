@@ -43,7 +43,7 @@
 
 ## Overview
 
-MaxiAgent is an AI-powered **multi-agent system** specialized in motorcycle financing for Maxikash. The system orchestrates multiple specialized agents to provide expert consultation on motorcycle credits, generate personalized quotations, and offer up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
+MaxiAgent is an AI-powered **multi-agent system** specialized in motorcycle financing. The system orchestrates multiple specialized agents to provide expert consultation on motorcycle credits, generate personalized quotations, and offer up-to-date information about motorcycle catalogs from partner brands (Italika, Bajaj, Vento).
 
 The multi-agent engine combines Retrieval-Augmented Generation (RAG) technology with Google Cloud's Agent Development Kit to deliver comprehensive financial advisory services through specialized agents that handle different aspects of the customer journey.
 
@@ -239,12 +239,12 @@ The Origination Agent automatically collects:
    # External APIs - Development
    URL_CALCULADORA_DEV=https://your-calculator-api-dev.com
    KEY_CALCULADORA_DEV=your-calculator-api-key-dev
-   API_MAXIKASH_DEV=https://your-maxikash-api-dev.com
+   API_LENDING_DEV=https://your-lending-api-dev.com
 
    # External APIs - Production
    URL_CALCULADORA_PROD=https://your-calculator-api-prod.com
    KEY_CALCULADORA_PROD=your-calculator-api-key-prod
-   API_MAXIKASH_PROD=https://your-maxikash-api-prod.com
+   API_LENDING_PROD=https://your-lending-api-prod.com
 
    # Database Configuration (for RAG)
    POSTGRE_IP_PUBLIC=your-public-postgres-ip
@@ -335,7 +335,7 @@ Ensure your `.env` file contains the required variables for your target environm
 - `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `STAGING_BUCKET`
 - `RAG_CORPUS`, `GOOGLE_CSE_ID`, `GOOGLE_SEARCH_API_KEY`, `GOOGLE_MAPS_API_KEY`
 - `ROOT_AGENT_MODEL`, `ENV` (set to "dev")
-- `URL_CALCULADORA_DEV`, `KEY_CALCULADORA_DEV`, `API_MAXIKASH_DEV`
+- `URL_CALCULADORA_DEV`, `KEY_CALCULADORA_DEV`, `API_LENDING_DEV`
 - `URL_ORIGINADOR_DEV`, `KEY_ORIGINADOR_DEV`
 - `URL_DATA_MAXI_DEV`, `USRNAME_DATA_MAXI_DEV`, `PASSWORD_DATA_MAXI_DEV`
 - `ADK_ARTIFACT_BUCKET`
@@ -613,4 +613,4 @@ The multi-agent architecture provides several advantages:
 
 ## Disclaimer
 
-This project is designed as a multi-agent motorcycle financing consultation and quotation generation system. All financial calculations are provided through external APIs and should be verified for accuracy. The agents are intended for informational and consultation purposes within the Maxikash ecosystem.
+This project is designed as a multi-agent motorcycle financing consultation and quotation generation system. All financial calculations are provided through external APIs and should be verified for accuracy. The agents are intended for informational and consultation purposes.

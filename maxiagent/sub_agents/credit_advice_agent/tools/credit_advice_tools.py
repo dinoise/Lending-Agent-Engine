@@ -45,7 +45,7 @@ class CreditAdviceTools(BaseAgentTools):
 
         try:
             response: requests.Response = requests.post(
-                url=settings.API_MAXIKASH + "/api/semantic-search",
+                url=settings.API_LENDING + "/api/semantic-search",
                 json=data,
                 timeout=30
             )

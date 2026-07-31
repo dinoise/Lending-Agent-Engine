@@ -1,7 +1,7 @@
 [project]
 name = "maxiagent"
 version = "0.0.5"
-description = "Agent for Maxikash that aswers questions about credits, calculates quotations and search catalogs of motorcycles in Google"
+description = "Agent that answers questions about credits, calculates quotations and search catalogs of motorcycles in Google"
 authors = [
         { name = "Hector Aguilar", email = "hector.aguilar@estrategia52.com" },
 ]

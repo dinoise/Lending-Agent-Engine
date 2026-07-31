@@ -1,6 +1,6 @@
 # Estándar de Secciones para Prompts de Agentes
 
-Este documento define el estándar de organización de prompts en el sistema de agentes Maxikash.
+Este documento define el estándar de organización de prompts en el sistema de agentes.
 
 ## Secciones Obligatorias
 
@@ -15,7 +15,7 @@ Define el objetivo principal del agente y cuándo debe actuar.
 - **Ejemplo:**
   ```
   **Objetivo Principal:**
-  Eres el especialista en consulta de catálogos de motocicletas para Maxikash.
+  Eres el especialista en consulta de catálogos de motocicletas.
 
   Tu función es proporcionar información actualizada sobre modelos, precios y
   características técnicas de Vento, Italika y Bajaj.
